@@ -140,18 +140,18 @@ public class WeaponSystemNIS : MonoBehaviour
                 }
 
                 UpdateScoreUI();
-                CheckGameOver();
+                //CheckGameOver();
             }
         }
     }
 
-    private void CheckGameOver()
-    {
-        if (score >= 1400)
-        {
-            GameOver();
-        }
-    }
+    //private void CheckGameOver()
+    //{
+    //    if (score >= 1400)
+    //    {
+    //        GameOver();
+    //    }
+    //}
 
     private void GameOver()
     {

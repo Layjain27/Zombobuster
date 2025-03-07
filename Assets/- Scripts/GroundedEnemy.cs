@@ -10,10 +10,16 @@ public class GroundedEnemy : MonoBehaviour
     public float groundCheckDistance = 1.1f;
     public LayerMask groundLayer;
 
+    public Transform watchtower; // Assign the watchtower in the Inspector
+    public float detectionRange = 5f; // Distance at which the player is detected
+
     private Transform player;
     private CharacterController characterController;
     private bool isDead = false;
+    private bool aggroedByPlayer = false;
     private float verticalVelocity = 0f;
+
+    public event System.Action OnDeath; // Event for when enemy dies
 
     private void Start()
     {
@@ -26,16 +32,45 @@ public class GroundedEnemy : MonoBehaviour
         if (isDead) return;
 
         ApplyGravity();
-        MoveTowardsPlayer();
+        ChooseTarget();
     }
 
-    private void MoveTowardsPlayer()
+    private void ChooseTarget()
     {
-        Vector3 direction = (player.position - transform.position).normalized;
+        // If the player is within range OR the enemy was attacked, switch target to player
+        if (Vector3.Distance(transform.position, player.position) <= detectionRange || aggroedByPlayer)
+        {
+            AttackPlayer();
+        }
+        else
+        {
+            AttackWatchtower();
+        }
+    }
+
+    private void AttackWatchtower()
+    {
+        if (watchtower == null) return;
+
+        Debug.Log("Enemy attacking the watchtower!");
+
+        MoveTowards(watchtower.position);
+    }
+
+    private void AttackPlayer()
+    {
+        Debug.Log("Enemy attacking the player!");
+
+        MoveTowards(player.position);
+    }
+
+    private void MoveTowards(Vector3 targetPosition)
+    {
+        Vector3 direction = (targetPosition - transform.position).normalized;
         direction.y = 0; // Prevent movement in the air
 
         characterController.Move(direction * speed * Time.deltaTime);
-        transform.forward = direction; // Rotate to face the player
+        transform.forward = direction; // Rotate to face the target
     }
 
     private void ApplyGravity()
@@ -62,6 +97,7 @@ public class GroundedEnemy : MonoBehaviour
         if (isDead) return;
 
         isDead = true;
+        aggroedByPlayer = true; // Enemy switches to attacking the player
         StartCoroutine(Die());
     }
 
@@ -78,6 +114,7 @@ public class GroundedEnemy : MonoBehaviour
             yield return null;
         }
 
+        OnDeath?.Invoke(); // Notify spawner that enemy died
         Destroy(gameObject);
     }
 }

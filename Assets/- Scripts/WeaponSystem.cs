@@ -101,10 +101,10 @@ public class WeaponSystem : MonoBehaviour
             if (hit.collider.CompareTag("Enemy"))
             {
                 GroundedEnemy enemy1 = hit.collider.GetComponent<GroundedEnemy>();
-                PropellingEnemyAI enemy = hit.collider.GetComponent<PropellingEnemyAI>();
-                if (enemy != null)
+                PropellingEnemyAI enemy2 = hit.collider.GetComponent<PropellingEnemyAI>();
+                if (enemy2 != null)
                 {
-                    enemy.TakeDamage();
+                    enemy2.TakeDamage();
                 }
 
                 if (enemy1 != null)

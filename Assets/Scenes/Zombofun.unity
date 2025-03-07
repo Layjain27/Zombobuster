@@ -8967,8 +8967,8 @@ MonoBehaviour:
     shootSound: {fileID: 8300000, guid: 4a0f11083b109ff40ad72c3ce805a129, type: 3}
     reloadSound: {fileID: 8300000, guid: 96c660125a3368849b8f5436f9782dcd, type: 3}
     maxAmmo: 6
-    fireRate: 0.3
-    reloadTime: 3
+    fireRate: 0.1
+    reloadTime: 2
     enablePropulsion: 1
     basePropelForce: 40
     maxPropelMultiplier: 2
@@ -11639,6 +11639,10 @@ PrefabInstance:
       propertyPath: m_SlopeLimit
       value: 70
       objectReference: {fileID: 0}
+    - target: {fileID: 4223845212502145780, guid: 544534c005884ec4a9666d71f8f9881f, type: 3}
+      propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 7237794634436900441, guid: 544534c005884ec4a9666d71f8f9881f, type: 3}
       propertyPath: Loop
       value: 1
@@ -11663,7 +11667,16 @@ PrefabInstance:
       propertyPath: m_Mesh
       value: 
       objectReference: {fileID: 10208, guid: 0000000000000000e000000000000000, type: 0}
-    m_RemovedComponents: []
+    - target: {fileID: 9149078947346138499, guid: 544534c005884ec4a9666d71f8f9881f, type: 3}
+      propertyPath: m_Enabled
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 9149078947346138499, guid: 544534c005884ec4a9666d71f8f9881f, type: 3}
+      propertyPath: weapons.Array.data[0].fireRate
+      value: 0.01
+      objectReference: {fileID: 0}
+    m_RemovedComponents:
+    - {fileID: 9149078947346138499, guid: 544534c005884ec4a9666d71f8f9881f, type: 3}
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
     m_AddedComponents:
