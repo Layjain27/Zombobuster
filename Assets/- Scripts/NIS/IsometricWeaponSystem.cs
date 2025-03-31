@@ -28,11 +28,16 @@ public class IsometricWeaponSystem : MonoBehaviour
     public WeaponStats pistolStats;
     public WeaponStats shotgunStats;
     public WeaponStats rifleStats;
-    
+
 
     [Header("Recoil Settings")]
     public Vector3 recoilKick = new Vector3(0, 0.05f, -0.1f);
     public float recoilResetSpeed = 5f;
+
+    [Header("Bullet Trail Settings")]
+    public GameObject bulletTrailPrefab; // Assign a trail prefab in Inspector
+    public float trailSpeed = 50f;
+    public float trailLifetime = 0.5f;
 
     private WeaponType currentWeaponType;
     private WeaponStats activeWeapon;
@@ -142,8 +147,15 @@ public class IsometricWeaponSystem : MonoBehaviour
         {
             Debug.Log($"Hit: {hit.collider.name}");
             HandleEnemyHit(hit.collider);
+            CreateBulletTrail(currentShootOrigin.position, hit.point);
+        }
+        else
+        {
+            // If no hit, make the trail go the full range
+            CreateBulletTrail(currentShootOrigin.position, currentShootOrigin.position + transform.forward * activeWeapon.range);
         }
     }
+
 
     void ShotgunShoot()
     {
@@ -153,14 +165,21 @@ public class IsometricWeaponSystem : MonoBehaviour
                              new Vector3(Random.Range(-activeWeapon.spread, activeWeapon.spread),
                                          0,
                                          Random.Range(-activeWeapon.spread, activeWeapon.spread));
+
             Ray ray = new Ray(currentShootOrigin.position, spread.normalized);
             if (Physics.Raycast(ray, out RaycastHit hit, activeWeapon.range, hitLayers))
             {
                 Debug.Log($"Shotgun hit: {hit.collider.name}");
                 HandleEnemyHit(hit.collider);
+                CreateBulletTrail(currentShootOrigin.position, hit.point);
+            }
+            else
+            {
+                CreateBulletTrail(currentShootOrigin.position, currentShootOrigin.position + spread.normalized * activeWeapon.range);
             }
         }
     }
+
 
     void HandleEnemyHit(Collider collider)
     {
@@ -171,7 +190,7 @@ public class IsometricWeaponSystem : MonoBehaviour
             return;
         }
 
-        
+
     }
 
     IEnumerator Reload()
@@ -295,6 +314,32 @@ public class IsometricWeaponSystem : MonoBehaviour
             Gizmos.DrawWireSphere(meleeShootOrigin.position, activeWeapon.meleeRange);
         }
     }
+
+    void CreateBulletTrail(Vector3 start, Vector3 end)
+    {
+        if (!bulletTrailPrefab) return;
+
+        GameObject trail = Instantiate(bulletTrailPrefab, start, Quaternion.identity);
+        StartCoroutine(MoveTrail(trail, start, end));
+    }
+
+    IEnumerator MoveTrail(GameObject trail, Vector3 start, Vector3 end)
+    {
+        float elapsedTime = 0f;
+        float distance = Vector3.Distance(start, end);
+        float duration = distance / trailSpeed;
+
+        while (elapsedTime < duration)
+        {
+            trail.transform.position = Vector3.Lerp(start, end, elapsedTime / duration);
+            elapsedTime += Time.deltaTime;
+            yield return null;
+        }
+
+        Destroy(trail, trailLifetime);
+    }
+
+
 }
 
 [System.Serializable]

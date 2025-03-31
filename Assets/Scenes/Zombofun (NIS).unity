@@ -3877,7 +3877,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 2147483647
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!154 &677811423
 TerrainCollider:
   m_ObjectHideFlags: 0
@@ -7753,6 +7753,115 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1227309471}
   m_Mesh: {fileID: -153830957423991239, guid: 1ef9ebe1966c4ca4da30db8dfed1b59d, type: 3}
+--- !u!1 &1248373929
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1248373933}
+  - component: {fileID: 1248373932}
+  - component: {fileID: 1248373931}
+  - component: {fileID: 1248373930}
+  m_Layer: 3
+  m_Name: Plane
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!64 &1248373930
+MeshCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1248373929}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 5
+  m_Convex: 0
+  m_CookingOptions: 30
+  m_Mesh: {fileID: 10209, guid: 0000000000000000e000000000000000, type: 0}
+--- !u!23 &1248373931
+MeshRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1248373929}
+  m_Enabled: 1
+  m_CastShadows: 1
+  m_ReceiveShadows: 1
+  m_DynamicOccludee: 1
+  m_StaticShadowCaster: 0
+  m_MotionVectors: 1
+  m_LightProbeUsage: 1
+  m_ReflectionProbeUsage: 1
+  m_RayTracingMode: 2
+  m_RayTraceProcedural: 0
+  m_RayTracingAccelStructBuildFlagsOverride: 0
+  m_RayTracingAccelStructBuildFlags: 1
+  m_SmallMeshCulling: 1
+  m_RenderingLayerMask: 1
+  m_RendererPriority: 0
+  m_Materials:
+  - {fileID: 2100000, guid: 31321ba15b8f8eb4c954353edc038b1d, type: 2}
+  m_StaticBatchInfo:
+    firstSubMesh: 0
+    subMeshCount: 0
+  m_StaticBatchRoot: {fileID: 0}
+  m_ProbeAnchor: {fileID: 0}
+  m_LightProbeVolumeOverride: {fileID: 0}
+  m_ScaleInLightmap: 1
+  m_ReceiveGI: 1
+  m_PreserveUVs: 0
+  m_IgnoreNormalsForChartDetection: 0
+  m_ImportantGI: 0
+  m_StitchLightmapSeams: 1
+  m_SelectedEditorRenderState: 3
+  m_MinimumChartSize: 4
+  m_AutoUVMaxDistance: 0.5
+  m_AutoUVMaxAngle: 89
+  m_LightmapParameters: {fileID: 0}
+  m_SortingLayerID: 0
+  m_SortingLayer: 0
+  m_SortingOrder: 0
+  m_AdditionalVertexStreams: {fileID: 0}
+--- !u!33 &1248373932
+MeshFilter:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1248373929}
+  m_Mesh: {fileID: 10209, guid: 0000000000000000e000000000000000, type: 0}
+--- !u!4 &1248373933
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1248373929}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 505.56604, y: 0, z: 461.00858}
+  m_LocalScale: {x: 100, y: 100, z: 100}
+  m_ConstrainProportionsScale: 1
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1253374879
 GameObject:
   m_ObjectHideFlags: 0
@@ -18519,37 +18628,40 @@ MonoBehaviour:
     shootSound: {fileID: 8300000, guid: a558d6d07dc74d740bdb421c585dcc6e, type: 3}
     reloadSound: {fileID: 8300000, guid: a558d6d07dc74d740bdb421c585dcc6e, type: 3}
   pistolStats:
-    fireRate: 5
+    fireRate: 4
     maxAmmo: 8
-    reloadTime: 1
-    range: 50
+    reloadTime: 2
+    range: 40
     meleeRange: 0
     spread: 0.1
     shotgunPellets: 0
     shootSound: {fileID: 8300000, guid: 4a0f11083b109ff40ad72c3ce805a129, type: 3}
     reloadSound: {fileID: 8300000, guid: 96c660125a3368849b8f5436f9782dcd, type: 3}
   shotgunStats:
-    fireRate: 2
+    fireRate: 1
     maxAmmo: 10
-    reloadTime: 2
+    reloadTime: 4
     range: 20
     meleeRange: 0
-    spread: 0.9
-    shotgunPellets: 10
+    spread: 0.3
+    shotgunPellets: 8
     shootSound: {fileID: 8300000, guid: af5c19f71e0c30341b24fb14ec550ecb, type: 3}
     reloadSound: {fileID: 8300000, guid: ec9714600e2c1334baca60db07fb0e5a, type: 3}
   rifleStats:
-    fireRate: 10
+    fireRate: 8
     maxAmmo: 30
     reloadTime: 2
     range: 50
-    meleeRange: 0
+    meleeRange: 2
     spread: 0.1
     shotgunPellets: 0
     shootSound: {fileID: 8300000, guid: 4a0f11083b109ff40ad72c3ce805a129, type: 3}
     reloadSound: {fileID: 8300000, guid: 09890ca96cbbf7c4c86084fe3c94d2b0, type: 3}
   recoilKick: {x: 0, y: 0.05, z: -0.1}
   recoilResetSpeed: 5
+  bulletTrailPrefab: {fileID: 1922636969050311233, guid: e55ce2fe06e48b646ad58fd108295406, type: 3}
+  trailSpeed: 200
+  trailLifetime: 0.5
 --- !u!33 &8678946764874522602
 MeshFilter:
   m_ObjectHideFlags: 0
@@ -18661,3 +18773,4 @@ SceneRoots:
   - {fileID: 889552702}
   - {fileID: 535958780}
   - {fileID: 12206352}
+  - {fileID: 1248373933}
