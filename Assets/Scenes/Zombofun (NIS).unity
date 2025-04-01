@@ -5680,8 +5680,8 @@ Camera:
   near clip plane: 2.31
   far clip plane: 1000
   field of view: 60
-  orthographic: 0
-  orthographic size: 13
+  orthographic: 1
+  orthographic size: 20
   m_Depth: 0
   m_CullingMask:
     serializedVersion: 2
@@ -7766,7 +7766,7 @@ GameObject:
   - component: {fileID: 1248373931}
   - component: {fileID: 1248373930}
   m_Layer: 3
-  m_Name: Plane
+  m_Name: Ground
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
