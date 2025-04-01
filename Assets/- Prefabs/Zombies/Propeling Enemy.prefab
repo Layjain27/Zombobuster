@@ -14,7 +14,7 @@ GameObject:
   - component: {fileID: 5240787840756510712}
   - component: {fileID: 6769657024879749089}
   - component: {fileID: 8872869127979759173}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: Propeling Enemy
   m_TagString: Enemy
   m_Icon: {fileID: 0}

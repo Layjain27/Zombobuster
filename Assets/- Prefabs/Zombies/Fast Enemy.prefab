@@ -13,7 +13,7 @@ GameObject:
   - component: {fileID: 7574581412935578255}
   - component: {fileID: 5956920596912758534}
   - component: {fileID: 6753654999231841538}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: Fast Enemy
   m_TagString: Enemy
   m_Icon: {fileID: 0}
@@ -125,13 +125,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9bdcff478003bf64ab55269b71f95f86, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  speed: 20
-  pushBackForce: 5
-  rotationSpeed: 360
+  speed: 15
   gravity: -9.81
   groundCheckDistance: 1.1
   groundLayer:
     serializedVersion: 2
     m_Bits: 8
+  pushBackForce: 5
+  rotationSpeed: 360
   watchtower: {fileID: 8730859082131121083, guid: 56bc240d1b930334dbccb923e9256319, type: 3}
   detectionRange: 20
