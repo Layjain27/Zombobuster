@@ -29,6 +29,9 @@ public class IsometricWeaponSystem : MonoBehaviour
     public WeaponStats shotgunStats;
     public WeaponStats rifleStats;
 
+    [Header("Audio")]
+    public AudioClip weaponSwitchSound;
+    public AudioSource reloadSounds;
 
     [Header("Recoil Settings")]
     public Vector3 recoilKick = new Vector3(0, 0.05f, -0.1f);
@@ -141,20 +144,19 @@ public class IsometricWeaponSystem : MonoBehaviour
     }
 
     void RaycastShoot()
+{
+    Ray ray = new Ray(currentShootOrigin.position, transform.forward);
+    if (Physics.SphereCast(ray, activeWeapon.sphereRadius, out RaycastHit hit, activeWeapon.range, hitLayers))
     {
-        Ray ray = new Ray(currentShootOrigin.position, transform.forward);
-        if (Physics.Raycast(ray, out RaycastHit hit, activeWeapon.range, hitLayers))
-        {
-            Debug.Log($"Hit: {hit.collider.name}");
-            HandleEnemyHit(hit.collider);
-            CreateBulletTrail(currentShootOrigin.position, hit.point);
-        }
-        else
-        {
-            // If no hit, make the trail go the full range
-            CreateBulletTrail(currentShootOrigin.position, currentShootOrigin.position + transform.forward * activeWeapon.range);
-        }
+        Debug.Log($"Hit: {hit.collider.name}");
+        HandleEnemyHit(hit.collider);
+        CreateBulletTrail(currentShootOrigin.position, hit.point);
     }
+    else
+    {
+        CreateBulletTrail(currentShootOrigin.position, currentShootOrigin.position + transform.forward * activeWeapon.range);
+    }
+}
 
 
     void ShotgunShoot()
@@ -167,7 +169,7 @@ public class IsometricWeaponSystem : MonoBehaviour
                                          Random.Range(-activeWeapon.spread, activeWeapon.spread));
 
             Ray ray = new Ray(currentShootOrigin.position, spread.normalized);
-            if (Physics.Raycast(ray, out RaycastHit hit, activeWeapon.range, hitLayers))
+            if (Physics.SphereCast(ray, activeWeapon.sphereRadius, out RaycastHit hit, activeWeapon.range, hitLayers))
             {
                 Debug.Log($"Shotgun hit: {hit.collider.name}");
                 HandleEnemyHit(hit.collider);
@@ -183,15 +185,12 @@ public class IsometricWeaponSystem : MonoBehaviour
 
     void HandleEnemyHit(Collider collider)
     {
-        // Check GroundedEnemy first
         if (collider.TryGetComponent<GroundedEnemy>(out GroundedEnemy groundedEnemy))
         {
-            groundedEnemy.TakeDamage();
-            return;
+            groundedEnemy.TakeDamage(activeWeapon.damage);
         }
-
-
     }
+
 
     IEnumerator Reload()
     {
@@ -199,7 +198,14 @@ public class IsometricWeaponSystem : MonoBehaviour
         if (GetCurrentAmmo() == GetMaxAmmo()) yield break;
 
         isReloading = true;
-        PlaySound(activeWeapon.reloadSound);
+      
+        // Play reload sound using the dedicated reload AudioSource
+        if (activeWeapon.reloadSound)
+        {
+            reloadSounds.clip = activeWeapon.reloadSound;
+            reloadSounds.Play();
+        }  
+
         yield return new WaitForSeconds(activeWeapon.reloadTime);
 
         SetAmmo(GetMaxAmmo());
@@ -223,6 +229,19 @@ public class IsometricWeaponSystem : MonoBehaviour
 
     void SwitchWeapon(WeaponType newWeapon)
     {
+        // Cancel the reload process if it's running
+        if (isReloading)
+        {
+            StopCoroutine(Reload());
+            isReloading = false;
+
+            // Stop only the reload sound if it's playing
+            reloadSounds.Stop();
+        }
+
+        // Play the weapon switch sound
+        PlaySound(weaponSwitchSound);
+
         currentWeaponType = newWeapon;
         activeWeapon = newWeapon switch
         {
@@ -244,6 +263,9 @@ public class IsometricWeaponSystem : MonoBehaviour
 
         ActivateWeaponModel(newWeapon);
     }
+
+
+
 
     void ActivateWeaponModel(WeaponType type)
     {
@@ -311,7 +333,7 @@ public class IsometricWeaponSystem : MonoBehaviour
         if (meleeShootOrigin && currentWeaponType == WeaponType.Melee)
         {
             Gizmos.color = Color.red;
-            Gizmos.DrawWireSphere(meleeShootOrigin.position, activeWeapon.meleeRange);
+            //Gizmos.DrawWireSphere(meleeShootOrigin.position, activeWeapon.meleeRange);
         }
     }
 
@@ -340,6 +362,7 @@ public class IsometricWeaponSystem : MonoBehaviour
     }
 
 
+
 }
 
 [System.Serializable]
@@ -352,6 +375,9 @@ public class WeaponStats
     public float meleeRange = 2f;
     public float spread = 0.1f;
     public int shotgunPellets = 6;
+    public int damage = 10; // Default damage, can be changed per weapon
+
+    public float sphereRadius = 0.2f; // Adjust for desired hitbox size
 
     public AudioClip shootSound;
     public AudioClip reloadSound;
