@@ -10,11 +10,23 @@ public class GroundedEnemy : MonoBehaviour
     public float groundCheckDistance = 1.1f;
     public LayerMask groundLayer;
 
-    [Header("Combat Settings")]
-    public float pushBackForce = 5f;
-    public float rotationSpeed = 360f;
+    [Header("Attack Settings")]
+    public float attackRange = 1.5f;
+    public float attackDamage = 10f;
+    public float attackCooldown = 2f;
+    private float attackTimer = 0f;
+
+    [Header("Post-Attack Settings")]
+    public float postAttackPause = 1f;
+    private float postAttackTimer = 0f;
+
+    [Header("Detection Settings")]
     public Transform watchtower;
     public float detectionRange = 5f;
+
+    [Header("Spacing Settings")]
+    public float spacingRadius = 1.2f;
+    public LayerMask enemyLayer;
 
     [Header("Health Bar Settings")]
     public GameObject healthBarPrefab;
@@ -24,6 +36,10 @@ public class GroundedEnemy : MonoBehaviour
     private Canvas healthCanvas;
     private float healthBarFadeTimer = 0f;
     public float healthBarFadeDuration = 3f;
+
+    [Header("Death Settings")]
+    public float pushBackForce = 5f;
+    public float rotationSpeed = 360f;
 
     private Transform player;
     private CharacterController characterController;
@@ -40,13 +56,12 @@ public class GroundedEnemy : MonoBehaviour
 
         currentHealth = maxHealth;
 
-        // Instantiate health bar
         if (healthBarPrefab)
         {
             GameObject healthBarInstance = Instantiate(healthBarPrefab, transform.position + Vector3.up * 2f, Quaternion.identity);
             healthCanvas = healthBarInstance.GetComponentInChildren<Canvas>();
             healthBar = healthCanvas.GetComponentInChildren<Slider>();
-            healthCanvas.gameObject.SetActive(false); // Hide initially
+            healthCanvas.gameObject.SetActive(false);
         }
     }
 
@@ -58,6 +73,25 @@ public class GroundedEnemy : MonoBehaviour
         ChooseTarget();
         UpdateHealthBarPosition();
         HandleHealthBarFade();
+
+        if (attackTimer > 0)
+            attackTimer -= Time.deltaTime;
+
+        if (postAttackTimer > 0)
+        {
+            postAttackTimer -= Time.deltaTime;
+
+            // Smoothly rotate to face the player even during pause
+            Vector3 lookDir = player.position - transform.position;
+            lookDir.y = 0;
+            if (lookDir != Vector3.zero)
+            {
+                Quaternion targetRotation = Quaternion.LookRotation(lookDir);
+                transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, 10f * Time.deltaTime);
+            }
+
+            return; // Stop all other actions during pause
+        }
     }
 
     private void ChooseTarget()
@@ -70,13 +104,34 @@ public class GroundedEnemy : MonoBehaviour
 
     private void AttackWatchtower()
     {
-        if (watchtower == null) return;
+        if (watchtower == null || postAttackTimer > 0f) return;
         MoveTowards(watchtower.position);
     }
 
     private void AttackPlayer()
     {
-        MoveTowards(player.position);
+        float distance = Vector3.Distance(transform.position, player.position);
+
+        if (distance <= attackRange)
+        {
+            if (attackTimer <= 0f && postAttackTimer <= 0f)
+            {
+                PlayerNIS playerScript = player.GetComponent<PlayerNIS>();
+                if (playerScript != null && !playerScript.IsDead)
+                {
+                    playerScript.TakeDamage(attackDamage);
+                    attackTimer = attackCooldown;
+                    postAttackTimer = postAttackPause;
+                }
+            }
+        }
+        else if (postAttackTimer <= 0f)
+        {
+            if (!IsAttackPositionBlocked())
+                MoveTowards(player.position);
+            else
+                MoveAroundPlayer();
+        }
     }
 
     private void MoveTowards(Vector3 targetPosition)
@@ -85,6 +140,30 @@ public class GroundedEnemy : MonoBehaviour
         direction.y = 0;
         characterController.Move(direction * speed * Time.deltaTime);
         transform.forward = direction;
+    }
+
+    private void MoveAroundPlayer()
+    {
+        Vector3 directionToPlayer = (player.position - transform.position).normalized;
+        Vector3 strafeDirection = Vector3.Cross(Vector3.up, directionToPlayer);
+        Vector3 offset = strafeDirection * (Random.value > 0.5f ? 1 : -1) * spacingRadius;
+        Vector3 strafeTarget = player.position + offset;
+
+        Vector3 direction = (strafeTarget - transform.position).normalized;
+        direction.y = 0;
+        characterController.Move(direction * speed * Time.deltaTime);
+        transform.forward = direction;
+    }
+
+    private bool IsAttackPositionBlocked()
+    {
+        Collider[] colliders = Physics.OverlapSphere(transform.position, spacingRadius, enemyLayer);
+        foreach (var col in colliders)
+        {
+            if (col != null && col.transform != transform)
+                return true;
+        }
+        return false;
     }
 
     private void ApplyGravity()
@@ -125,15 +204,11 @@ public class GroundedEnemy : MonoBehaviour
     private IEnumerator Die()
     {
         isDead = true;
-
-        // Disable character controller collision
         characterController.detectCollisions = false;
 
-        // Disable health bar
         if (healthCanvas)
             healthCanvas.gameObject.SetActive(false);
 
-        // Knockback effect
         Vector3 pushBackDir = (-transform.forward + Vector3.up).normalized;
         float timer = 1f;
 
@@ -149,11 +224,20 @@ public class GroundedEnemy : MonoBehaviour
         Destroy(gameObject);
     }
 
-
     private void UpdateHealthBarPosition()
     {
         if (healthCanvas)
-            healthCanvas.transform.position = transform.position + Vector3.up * 2f;
+        {
+            float enemyHeight = characterController.bounds.extents.y * 2;
+            healthCanvas.transform.position = transform.position + Vector3.up * (enemyHeight + 0.1f);
+
+            Vector3 cameraForward = Camera.main.transform.forward;
+            cameraForward.y = 0;
+            healthCanvas.transform.rotation = Quaternion.LookRotation(cameraForward);
+
+            float scaleFactor = enemyHeight * 0.008f;
+            healthCanvas.transform.localScale = Vector3.one * scaleFactor;
+        }
     }
 
     private void HandleHealthBarFade()
@@ -165,5 +249,14 @@ public class GroundedEnemy : MonoBehaviour
             else
                 healthCanvas.gameObject.SetActive(false);
         }
+    }
+
+    private void OnDrawGizmosSelected()
+    {
+        Gizmos.color = Color.red;
+        Gizmos.DrawWireSphere(transform.position, detectionRange);
+
+        Gizmos.color = Color.yellow;
+        Gizmos.DrawWireSphere(transform.position, attackRange);
     }
 }

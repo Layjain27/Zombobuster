@@ -9,6 +9,7 @@ public class GameOver : MonoBehaviour
     {
 
         SceneManager.LoadScene("Zombofun (NIS)");
+        Time.timeScale = 1f;
     }
 
   

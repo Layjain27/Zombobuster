@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.UI;
 using UnityEngine.InputSystem;
 
 public class PlayerNIS : MonoBehaviour
@@ -18,6 +19,14 @@ public class PlayerNIS : MonoBehaviour
     [SerializeField] private float groundedDownVelocity = -2f;
     [SerializeField] private float checkSphereRadius = 0.4f;
 
+    [Header("Health Settings")]
+    public float maxHealth = 100f;
+    private float currentHealth;
+    public Slider healthBarUI;
+    public GameObject gameOverCanvas;
+
+    public bool IsDead { get; private set; } = false;
+
     private Vector3 velocity;
     private bool isGrounded;
 
@@ -36,6 +45,17 @@ public class PlayerNIS : MonoBehaviour
         // Bind Jump
         inputActions.Player.Jump.performed += ctx => Jump();
     }
+
+    private void Start()
+    {
+        currentHealth = maxHealth;
+        healthBarUI.maxValue = maxHealth;
+        healthBarUI.value = currentHealth;
+
+        if (gameOverCanvas)
+            gameOverCanvas.SetActive(false);
+    }
+
 
     private void OnEnable() => inputActions.Enable();
     private void OnDisable() => inputActions.Disable();
@@ -83,5 +103,26 @@ public class PlayerNIS : MonoBehaviour
         {
             velocity.y = Mathf.Sqrt(jumpHeight * -2f * gravity);
         }
+    }
+
+    public void TakeDamage(float damage)
+    {
+        if (IsDead) return;
+
+        currentHealth -= damage;
+        currentHealth = Mathf.Clamp(currentHealth, 0, maxHealth);
+        healthBarUI.value = currentHealth;
+
+        if (currentHealth <= 0)
+            Die();
+    }
+
+    private void Die()
+    {
+        IsDead = true;
+        Time.timeScale = 0f;
+
+        if (gameOverCanvas)
+            gameOverCanvas.SetActive(true);
     }
 }

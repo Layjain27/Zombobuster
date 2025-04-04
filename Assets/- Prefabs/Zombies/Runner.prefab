@@ -131,10 +131,18 @@ MonoBehaviour:
   groundLayer:
     serializedVersion: 2
     m_Bits: 8
-  pushBackForce: 5
-  rotationSpeed: 360
+  attackRange: 2
+  attackDamage: 6
+  attackCooldown: 1
+  postAttackPause: 1
   watchtower: {fileID: 8730859082131121083, guid: 56bc240d1b930334dbccb923e9256319, type: 3}
   detectionRange: 20
+  spacingRadius: 1.2
+  enemyLayer:
+    serializedVersion: 2
+    m_Bits: 64
   healthBarPrefab: {fileID: 7925617014463901621, guid: 5d0d8d97803d5af48914635aeddc7d1e, type: 3}
   maxHealth: 28
   healthBarFadeDuration: 3
+  pushBackForce: 5
+  rotationSpeed: 360
