@@ -125,7 +125,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9bdcff478003bf64ab55269b71f95f86, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  speed: 15
+  speed: 10
   gravity: -9.81
   groundCheckDistance: 1.1
   groundLayer:
@@ -146,3 +146,6 @@ MonoBehaviour:
   healthBarFadeDuration: 3
   pushBackForce: 5
   rotationSpeed: 360
+  knockbackForceReceiver: 5
+  knockbackDuration: 0.2
+  knockbackLerpSpeed: 10
