@@ -38,14 +38,22 @@ public class GroundedEnemy : MonoBehaviour
     public float healthBarFadeDuration = 3f;
 
     [Header("Death Settings")]
-    public float pushBackForce = 5f;
+    public float pushBackForce = 5f; // This is for death animation push back
     public float rotationSpeed = 360f;
+
+    [Header("Knockback Settings")] // New Header for enemy-specific knockback
+    public float knockbackForceReceiver = 5f; // How strong the knockback is received by this enemy
+    public float knockbackDuration = 0.2f; // How long the enemy is actively pushed back
+    public float knockbackLerpSpeed = 10f; // How quickly the knockback force decays
 
     private Transform player;
     private CharacterController characterController;
     private bool isDead = false;
     private bool aggroedByPlayer = false;
     private float verticalVelocity = 0f;
+
+    private Vector3 knockbackVelocity = Vector3.zero; // Current velocity due to knockback
+    private bool isKnockedBack = false; // Flag to indicate if enemy is currently being knocked back
 
     public event System.Action OnDeath;
 
@@ -69,14 +77,27 @@ public class GroundedEnemy : MonoBehaviour
     {
         if (isDead) return;
 
-        ApplyGravity();
-        ChooseTarget();
-        UpdateHealthBarPosition();
-        HandleHealthBarFade();
+        // Handle knockback movement
+        if (isKnockedBack)
+        {
+            // Apply knockback velocity using CharacterController.Move
+            characterController.Move(knockbackVelocity * Time.deltaTime);
 
-        if (attackTimer > 0)
-            attackTimer -= Time.deltaTime;
+            // Decay the knockback velocity over time
+            knockbackVelocity = Vector3.Lerp(knockbackVelocity, Vector3.zero, knockbackLerpSpeed * Time.deltaTime);
 
+            // If knockback velocity is very small, consider knockback finished
+            // This prevents the enemy from "sliding" indefinitely from a tiny residual force
+            if (knockbackVelocity.magnitude < 0.1f)
+            {
+                isKnockedBack = false;
+            }
+            // IMPORTANT: If you want other movement/AI to completely stop during knockback,
+            // make sure to return early here or manage states within ChooseTarget().
+            // For now, we'll let it try to move if the knockback is very weak.
+        }
+
+        // Only run normal AI/movement if not knocked back AND not in post-attack pause
         if (postAttackTimer > 0)
         {
             postAttackTimer -= Time.deltaTime;
@@ -92,10 +113,27 @@ public class GroundedEnemy : MonoBehaviour
 
             return; // Stop all other actions during pause
         }
+
+        // Only apply gravity and choose target if not currently experiencing significant knockback
+        // This prevents gravity from interfering too much with knockback and ensures AI pauses
+        if (!isKnockedBack)
+        {
+            ApplyGravity();
+            ChooseTarget();
+        }
+
+        UpdateHealthBarPosition();
+        HandleHealthBarFade();
+
+        if (attackTimer > 0)
+            attackTimer -= Time.deltaTime;
     }
 
     private void ChooseTarget()
     {
+        // Don't choose target or move if knocked back
+        if (isKnockedBack) return;
+
         if (Vector3.Distance(transform.position, player.position) <= detectionRange || aggroedByPlayer)
             AttackPlayer();
         else
@@ -104,12 +142,14 @@ public class GroundedEnemy : MonoBehaviour
 
     private void AttackWatchtower()
     {
-        if (watchtower == null || postAttackTimer > 0f) return;
+        if (watchtower == null || postAttackTimer > 0f || isKnockedBack) return; // Added isKnockedBack check
         MoveTowards(watchtower.position);
     }
 
     private void AttackPlayer()
     {
+        if (isKnockedBack) return; // Added isKnockedBack check
+
         float distance = Vector3.Distance(transform.position, player.position);
 
         if (distance <= attackRange)
@@ -136,6 +176,9 @@ public class GroundedEnemy : MonoBehaviour
 
     private void MoveTowards(Vector3 targetPosition)
     {
+        // Only move if not knocked back
+        if (isKnockedBack) return;
+
         Vector3 direction = (targetPosition - transform.position).normalized;
         direction.y = 0;
         characterController.Move(direction * speed * Time.deltaTime);
@@ -144,6 +187,9 @@ public class GroundedEnemy : MonoBehaviour
 
     private void MoveAroundPlayer()
     {
+        // Only move if not knocked back
+        if (isKnockedBack) return;
+
         Vector3 directionToPlayer = (player.position - transform.position).normalized;
         Vector3 strafeDirection = Vector3.Cross(Vector3.up, directionToPlayer);
         Vector3 offset = strafeDirection * (Random.value > 0.5f ? 1 : -1) * spacingRadius;
@@ -157,6 +203,7 @@ public class GroundedEnemy : MonoBehaviour
 
     private bool IsAttackPositionBlocked()
     {
+        // No need to check isKnockedBack here, as calling methods already handle it.
         Collider[] colliders = Physics.OverlapSphere(transform.position, spacingRadius, enemyLayer);
         foreach (var col in colliders)
         {
@@ -168,6 +215,8 @@ public class GroundedEnemy : MonoBehaviour
 
     private void ApplyGravity()
     {
+        // Gravity is applied normally, but characterController.Move
+        // will be overridden by knockbackVelocity if isKnockedBack is true.
         if (IsGrounded())
             verticalVelocity = -2f;
         else
@@ -178,10 +227,13 @@ public class GroundedEnemy : MonoBehaviour
 
     private bool IsGrounded()
     {
-        return Physics.Raycast(transform.position, Vector3.down, groundCheckDistance, groundLayer);
+        // Use characterController.isGrounded for reliability with CharacterController
+        // You can still keep Raycast for additional ground checks if needed, but isGrounded is primary.
+        return characterController.isGrounded || Physics.Raycast(transform.position, Vector3.down, groundCheckDistance, groundLayer);
     }
 
-    public void TakeDamage(float damage)
+    // Modified to accept attacker position for knockback direction
+    public void TakeDamage(float damage, Vector3 attackerPosition)
     {
         if (isDead) return;
 
@@ -195,6 +247,21 @@ public class GroundedEnemy : MonoBehaviour
             healthBarFadeTimer = healthBarFadeDuration;
         }
 
+        // --- KNOCKBACK IMPLEMENTATION START ---
+        // Calculate knockback direction away from the attacker
+        Vector3 knockbackDirection = (transform.position - attackerPosition).normalized;
+        knockbackDirection.y = 0; // Keep knockback horizontal for isometric view
+        knockbackDirection.Normalize(); // Re-normalize after setting y to 0
+
+        // Set the initial knockback velocity
+        // Use knockbackForceReceiver from this script, as it controls how this enemy reacts
+        knockbackVelocity = knockbackDirection * knockbackForceReceiver;
+        isKnockedBack = true;
+
+        // Reset post-attack timer if currently in one, to allow knockback to interrupt
+        postAttackTimer = 0f;
+        // --- KNOCKBACK IMPLEMENTATION END ---
+
         if (currentHealth <= 0)
         {
             StartCoroutine(Die());
@@ -204,17 +271,29 @@ public class GroundedEnemy : MonoBehaviour
     private IEnumerator Die()
     {
         isDead = true;
-        characterController.detectCollisions = false;
+        // Disable CharacterController to stop its movement and collisions during death animation
+        if (characterController != null)
+        {
+            characterController.enabled = false;
+        }
 
         if (healthCanvas)
             healthCanvas.gameObject.SetActive(false);
 
-        Vector3 pushBackDir = (-transform.forward + Vector3.up).normalized;
+        // This push back is specifically for the death animation
+        Vector3 deathPushBackDir = (-transform.forward + Vector3.up).normalized;
         float timer = 1f;
+
+        // If you want the death push back to use a Rigidbody (e.g., ragdoll), you'd enable/add it here.
+        // For now, it will apply a simple push using transform.position if CharacterController is disabled.
+        // Or you can use a Rigidbody here for better physics based death.
+        // If you enable Rigidbody for death, make sure to add it and set isKinematic false.
 
         while (timer > 0)
         {
-            characterController.Move(pushBackDir * pushBackForce * Time.deltaTime);
+            // If CharacterController is disabled, this push will work
+            // If CharacterController is enabled (which it shouldn't be here), this won't work well
+            transform.position += deathPushBackDir * pushBackForce * Time.deltaTime;
             transform.Rotate(Vector3.forward * rotationSpeed * Time.deltaTime);
             timer -= Time.deltaTime;
             yield return null;
@@ -228,14 +307,15 @@ public class GroundedEnemy : MonoBehaviour
     {
         if (healthCanvas)
         {
-            float enemyHeight = characterController.bounds.extents.y * 2;
+            // characterController.height or bounds.size.y is generally better for full height
+            float enemyHeight = characterController.height;
             healthCanvas.transform.position = transform.position + Vector3.up * (enemyHeight + 0.1f);
 
             Vector3 cameraForward = Camera.main.transform.forward;
             cameraForward.y = 0;
             healthCanvas.transform.rotation = Quaternion.LookRotation(cameraForward);
 
-            float scaleFactor = enemyHeight * 0.008f;
+            float scaleFactor = enemyHeight * 0.008f; // Adjust this factor as needed
             healthCanvas.transform.localScale = Vector3.one * scaleFactor;
         }
     }
@@ -258,5 +338,12 @@ public class GroundedEnemy : MonoBehaviour
 
         Gizmos.color = Color.yellow;
         Gizmos.DrawWireSphere(transform.position, attackRange);
+
+        if (characterController != null)
+        {
+            // Draw a sphere for the CharacterController's bottom, useful for ground check visualization
+            Gizmos.color = Color.cyan;
+            Gizmos.DrawWireSphere(transform.position + Vector3.down * (characterController.height / 2 - characterController.radius), characterController.radius);
+        }
     }
 }

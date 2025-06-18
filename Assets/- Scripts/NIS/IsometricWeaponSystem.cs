@@ -139,40 +139,42 @@ public class IsometricWeaponSystem : MonoBehaviour
         foreach (var hit in hits)
         {
             Debug.Log($"Melee hit: {hit.gameObject.name}");
-            //HandleEnemyHit(hit.collider);
+            // Pass player's position for knockback calculation
+            HandleEnemyHit(hit, transform.position);
         }
     }
 
     void RaycastShoot()
-{
-    Ray ray = new Ray(currentShootOrigin.position, transform.forward);
-    if (Physics.SphereCast(ray, activeWeapon.sphereRadius, out RaycastHit hit, activeWeapon.range, hitLayers))
     {
-        Debug.Log($"Hit: {hit.collider.name}");
-        HandleEnemyHit(hit.collider);
-        CreateBulletTrail(currentShootOrigin.position, hit.point);
+        Ray ray = new Ray(currentShootOrigin.position, transform.forward);
+        if (Physics.SphereCast(ray, activeWeapon.sphereRadius, out RaycastHit hit, activeWeapon.range, hitLayers))
+        {
+            Debug.Log($"Hit: {hit.collider.name}");
+            // Pass player's position for knockback calculation
+            HandleEnemyHit(hit.collider, transform.position);
+            CreateBulletTrail(currentShootOrigin.position, hit.point);
+        }
+        else
+        {
+            CreateBulletTrail(currentShootOrigin.position, currentShootOrigin.position + transform.forward * activeWeapon.range);
+        }
     }
-    else
-    {
-        CreateBulletTrail(currentShootOrigin.position, currentShootOrigin.position + transform.forward * activeWeapon.range);
-    }
-}
-
 
     void ShotgunShoot()
     {
         for (int i = 0; i < activeWeapon.shotgunPellets; i++)
         {
             Vector3 spread = transform.forward +
-                             new Vector3(Random.Range(-activeWeapon.spread, activeWeapon.spread),
-                                         0,
-                                         Random.Range(-activeWeapon.spread, activeWeapon.spread));
+                                     new Vector3(Random.Range(-activeWeapon.spread, activeWeapon.spread),
+                                                 0,
+                                                 Random.Range(-activeWeapon.spread, activeWeapon.spread));
 
             Ray ray = new Ray(currentShootOrigin.position, spread.normalized);
             if (Physics.SphereCast(ray, activeWeapon.sphereRadius, out RaycastHit hit, activeWeapon.range, hitLayers))
             {
                 Debug.Log($"Shotgun hit: {hit.collider.name}");
-                HandleEnemyHit(hit.collider);
+                // Pass player's position for knockback calculation
+                HandleEnemyHit(hit.collider, transform.position);
                 CreateBulletTrail(currentShootOrigin.position, hit.point);
             }
             else
@@ -182,12 +184,13 @@ public class IsometricWeaponSystem : MonoBehaviour
         }
     }
 
-
-    void HandleEnemyHit(Collider collider)
+    // Modified to accept attacker position
+    void HandleEnemyHit(Collider collider, Vector3 attackerPosition)
     {
         if (collider.TryGetComponent<GroundedEnemy>(out GroundedEnemy groundedEnemy))
         {
-            groundedEnemy.TakeDamage(activeWeapon.damage);
+            // Pass attackerPosition to enemy's TakeDamage method
+            groundedEnemy.TakeDamage(activeWeapon.damage, attackerPosition);
         }
     }
 
@@ -198,13 +201,13 @@ public class IsometricWeaponSystem : MonoBehaviour
         if (GetCurrentAmmo() == GetMaxAmmo()) yield break;
 
         isReloading = true;
-      
+
         // Play reload sound using the dedicated reload AudioSource
         if (activeWeapon.reloadSound)
         {
             reloadSounds.clip = activeWeapon.reloadSound;
             reloadSounds.Play();
-        }  
+        }
 
         yield return new WaitForSeconds(activeWeapon.reloadTime);
 
@@ -263,9 +266,6 @@ public class IsometricWeaponSystem : MonoBehaviour
 
         ActivateWeaponModel(newWeapon);
     }
-
-
-
 
     void ActivateWeaponModel(WeaponType type)
     {
@@ -333,7 +333,7 @@ public class IsometricWeaponSystem : MonoBehaviour
         if (meleeShootOrigin && currentWeaponType == WeaponType.Melee)
         {
             Gizmos.color = Color.red;
-            //Gizmos.DrawWireSphere(meleeShootOrigin.position, activeWeapon.meleeRange);
+            Gizmos.DrawWireSphere(meleeShootOrigin.position, activeWeapon.meleeRange);
         }
     }
 
@@ -360,9 +360,6 @@ public class IsometricWeaponSystem : MonoBehaviour
 
         Destroy(trail, trailLifetime);
     }
-
-
-
 }
 
 [System.Serializable]
@@ -381,6 +378,10 @@ public class WeaponStats
 
     public AudioClip shootSound;
     public AudioClip reloadSound;
+
+    [Header("Knockback")]
+    public float knockbackForce = 10f; // How strong the knockback is for this weapon
+    // Note: knockbackDuration and knockbackLerpSpeed are now controlled by the enemy script
 }
 
 public enum WeaponType

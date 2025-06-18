@@ -2143,7 +2143,7 @@ Light:
   serializedVersion: 11
   m_Type: 1
   m_Color: {r: 1, g: 1, b: 1, a: 1}
-  m_Intensity: 2
+  m_Intensity: 3
   m_Range: 10
   m_SpotAngle: 30
   m_InnerSpotAngle: 21.80208
@@ -2186,7 +2186,7 @@ Light:
   m_LightShadowCasterMode: 0
   m_AreaSize: {x: 1, y: 1}
   m_BounceIntensity: 1
-  m_ColorTemperature: 5000
+  m_ColorTemperature: 1500
   m_UseColorTemperature: 1
   m_BoundingSphereOverride: {x: 0, y: 0, z: 0, w: 0}
   m_UseBoundingSphereOverride: 0
@@ -2205,13 +2205,13 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 410087039}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.25234118, y: 0.2315709, z: -0.023664152, w: 0.9392225}
+  m_LocalRotation: {x: 0.8329002, y: 0.09496365, z: -0.19269022, w: 0.510029}
   m_LocalPosition: {x: 0, y: 325, z: 0}
   m_LocalScale: {x: 1, y: 0, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 29.01, y: 28.93, z: 4.75}
+  m_LocalEulerAnglesHint: {x: 117.6, y: 28.93, z: 4.75}
 --- !u!114 &410087042
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -6992,7 +6992,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &1012662465
 Transform:
   m_ObjectHideFlags: 0
@@ -8921,9 +8921,9 @@ MonoBehaviour:
   enemyPrefabs:
   - {fileID: 2543027250161301348, guid: 391b7c1103409894a9ae9fcbf7292a45, type: 3}
   spawnRadius: 20
-  maxSpawns: 100
-  maxSpawnAmount: 3
-  spawnInterval: 5
+  maxSpawns: 30
+  maxSpawnAmount: 5
+  spawnInterval: 10
 --- !u!1 &1323758309
 GameObject:
   m_ObjectHideFlags: 0
@@ -19139,13 +19139,14 @@ MonoBehaviour:
     maxAmmo: 0
     reloadTime: 0
     range: 0
-    meleeRange: 2
+    meleeRange: 4
     spread: 0
     shotgunPellets: 0
-    damage: 10
+    damage: 3
     sphereRadius: 0.2
     shootSound: {fileID: 8300000, guid: a558d6d07dc74d740bdb421c585dcc6e, type: 3}
     reloadSound: {fileID: 8300000, guid: a558d6d07dc74d740bdb421c585dcc6e, type: 3}
+    knockbackForce: 40
   pistolStats:
     fireRate: 4
     maxAmmo: 12
@@ -19158,6 +19159,7 @@ MonoBehaviour:
     sphereRadius: 1
     shootSound: {fileID: 8300000, guid: 4a0f11083b109ff40ad72c3ce805a129, type: 3}
     reloadSound: {fileID: 8300000, guid: 96c660125a3368849b8f5436f9782dcd, type: 3}
+    knockbackForce: 10
   shotgunStats:
     fireRate: 1
     maxAmmo: 10
@@ -19170,6 +19172,7 @@ MonoBehaviour:
     sphereRadius: 0.2
     shootSound: {fileID: 8300000, guid: af5c19f71e0c30341b24fb14ec550ecb, type: 3}
     reloadSound: {fileID: 8300000, guid: ec9714600e2c1334baca60db07fb0e5a, type: 3}
+    knockbackForce: 10
   rifleStats:
     fireRate: 8
     maxAmmo: 30
@@ -19182,6 +19185,7 @@ MonoBehaviour:
     sphereRadius: 0.2
     shootSound: {fileID: 8300000, guid: 4a0f11083b109ff40ad72c3ce805a129, type: 3}
     reloadSound: {fileID: 8300000, guid: 09890ca96cbbf7c4c86084fe3c94d2b0, type: 3}
+    knockbackForce: 10
   weaponSwitchSound: {fileID: 8300000, guid: bfe51b825201b58429d6d1e5512ac82c, type: 3}
   reloadSounds: {fileID: 672323005}
   recoilKick: {x: 0, y: 0.05, z: -0.1}

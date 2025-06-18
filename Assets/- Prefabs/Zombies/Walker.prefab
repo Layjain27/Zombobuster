@@ -136,7 +136,7 @@ MonoBehaviour:
   attackCooldown: 1
   postAttackPause: 1
   watchtower: {fileID: 8730859082131121083, guid: 56bc240d1b930334dbccb923e9256319, type: 3}
-  detectionRange: 30
+  detectionRange: 20
   spacingRadius: 1.2
   enemyLayer:
     serializedVersion: 2
@@ -146,3 +146,6 @@ MonoBehaviour:
   healthBarFadeDuration: 3
   pushBackForce: 5
   rotationSpeed: 360
+  knockbackForceReceiver: 5
+  knockbackDuration: 0.2
+  knockbackLerpSpeed: 10
