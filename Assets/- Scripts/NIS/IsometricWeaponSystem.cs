@@ -184,13 +184,24 @@ public class IsometricWeaponSystem : MonoBehaviour
         }
     }
 
-    // Modified to accept attacker position
+    // In IsometricWeaponSystem.cs
+
     void HandleEnemyHit(Collider collider, Vector3 attackerPosition)
     {
-        if (collider.TryGetComponent<GroundedEnemy>(out GroundedEnemy groundedEnemy))
+        // --- UPDATED: Using GetComponentInParent is more robust ---
+        // This looks for the component on the object hit AND any of its parents.
+        IDamageable damageableTarget = collider.GetComponentInParent<IDamageable>();
+
+        if (damageableTarget != null)
         {
-            // Pass attackerPosition to enemy's TakeDamage method
-            groundedEnemy.TakeDamage(activeWeapon.damage, attackerPosition);
+            // If we found something damageable (an Enemy or a Tower), deal damage to it.
+            Debug.Log($"Successfully found IDamageable on {collider.gameObject.name}'s parent, dealing damage.");
+            damageableTarget.TakeDamage(activeWeapon.damage);
+        }
+        else
+        {
+            // Add this log to see what you're hitting if it's not working.
+            Debug.LogWarning($"Bullet hit {collider.gameObject.name}, but no IDamageable component was found on it or its parents.");
         }
     }
 

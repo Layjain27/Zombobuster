@@ -1,10 +1,11 @@
-// IDamageable.cs
-using UnityEngine; // Required for Vector3 in TakeDamage method
+// Filename: IDamageable.cs
+using UnityEngine;
 
 public interface IDamageable
 {
-    // This method will be implemented by anything that can take damage.
-    // 'amount' is how much damage is taken.
-    // 'hitPoint' is the world position where the damage occurred (useful for effects).
-    void TakeDamage(float amount, Vector3 hitPoint);
+    /// <summary>
+    /// A contract for any object that can take damage.
+    /// </summary>
+    /// <param name="damageAmount">The amount of damage to inflict.</param>
+    void TakeDamage(float damageAmount);
 }
