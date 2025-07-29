@@ -2,7 +2,6 @@ using UnityEngine;
 using System.Collections;
 using UnityEngine.UI;
 
-// Added the IDamageable interface to the class definition
 public class GroundedEnemy : MonoBehaviour, IDamageable
 {
     [Header("Movement Settings")]
@@ -41,6 +40,10 @@ public class GroundedEnemy : MonoBehaviour, IDamageable
     [Header("Death Settings")]
     public float pushBackForce = 5f;
     public float rotationSpeed = 360f;
+
+    [Header("Drop Settings")]
+    [SerializeField] private GameObject soulsPrefab;
+    [SerializeField] private float soulsDropChance = 1f;
 
     private Transform player;
     private CharacterController characterController;
@@ -150,24 +153,56 @@ public class GroundedEnemy : MonoBehaviour, IDamageable
         }
     }
 
-    private void MoveTowards(Vector3 targetPosition) { if (characterController == null) return; Vector3 direction = (targetPosition - transform.position).normalized; direction.y = 0; characterController.Move(direction * speed * Time.deltaTime); if (direction != Vector3.zero) { transform.forward = direction; } }
-    private void MoveAroundPlayer() { if (player == null || characterController == null) return; Vector3 directionToPlayer = (player.position - transform.position).normalized; Vector3 strafeDirection = Vector3.Cross(Vector3.up, directionToPlayer); Vector3 offset = strafeDirection * (Random.value > 0.5f ? 1 : -1) * spacingRadius; Vector3 strafeTarget = player.position + offset; Vector3 direction = (strafeTarget - transform.position).normalized; direction.y = 0; characterController.Move(direction * speed * Time.deltaTime); if (direction != Vector3.zero) { transform.forward = direction; } }
-    private bool IsAttackPositionBlocked() { Collider[] colliders = Physics.OverlapSphere(transform.position, spacingRadius, enemyLayer); foreach (var col in colliders) { if (col != null && col.transform != transform) return true; } return false; }
-    private void ApplyGravity() { if (characterController == null) return; if (IsGrounded()) verticalVelocity = -2f; else verticalVelocity += gravity * Time.deltaTime; characterController.Move(new Vector3(0, verticalVelocity * Time.deltaTime, 0)); }
-    private bool IsGrounded() { return Physics.Raycast(transform.position, Vector3.down, groundCheckDistance, groundLayer); }
+    private void MoveTowards(Vector3 targetPosition)
+    {
+        if (characterController == null) return;
+        Vector3 direction = (targetPosition - transform.position).normalized;
+        direction.y = 0;
+        characterController.Move(direction * speed * Time.deltaTime);
+        if (direction != Vector3.zero) { transform.forward = direction; }
+    }
 
-    /// <summary>
-    /// This new method satisfies the IDamageable interface, allowing the weapon system to damage this enemy.
-    /// </summary>
+    private void MoveAroundPlayer()
+    {
+        if (player == null || characterController == null) return;
+        Vector3 directionToPlayer = (player.position - transform.position).normalized;
+        Vector3 strafeDirection = Vector3.Cross(Vector3.up, directionToPlayer);
+        Vector3 offset = strafeDirection * (Random.value > 0.5f ? 1 : -1) * spacingRadius;
+        Vector3 strafeTarget = player.position + offset;
+        Vector3 direction = (strafeTarget - transform.position).normalized;
+        direction.y = 0;
+        characterController.Move(direction * speed * Time.deltaTime);
+        if (direction != Vector3.zero) { transform.forward = direction; }
+    }
+
+    private bool IsAttackPositionBlocked()
+    {
+        Collider[] colliders = Physics.OverlapSphere(transform.position, spacingRadius, enemyLayer);
+        foreach (var col in colliders)
+        {
+            if (col != null && col.transform != transform) return true;
+        }
+        return false;
+    }
+
+    private void ApplyGravity()
+    {
+        if (characterController == null) return;
+        if (IsGrounded()) verticalVelocity = -2f;
+        else verticalVelocity += gravity * Time.deltaTime;
+        characterController.Move(new Vector3(0, verticalVelocity * Time.deltaTime, 0));
+    }
+
+    private bool IsGrounded()
+    {
+        return Physics.Raycast(transform.position, Vector3.down, groundCheckDistance, groundLayer);
+    }
+
     public void TakeDamage(float damage)
     {
-        // It calls the original method below, passing a default value for the hitPoint.
         TakeDamage(damage, transform.position);
     }
 
-    /// <summary>
-    /// This is the original method for taking damage.
-    /// </summary>
     public void TakeDamage(float damage, Vector3 hitPoint)
     {
         if (isDead) return;
@@ -181,14 +216,36 @@ public class GroundedEnemy : MonoBehaviour, IDamageable
         }
     }
 
-    public void SetHealth(float health) { maxHealth = health; currentHealth = maxHealth; UpdateHealthBar(); }
-    private void UpdateHealthBar() { if (healthBar && healthCanvas) { healthCanvas.gameObject.SetActive(true); healthBar.value = currentHealth / maxHealth; } }
+    public void SetHealth(float health)
+    {
+        maxHealth = health;
+        currentHealth = maxHealth;
+        UpdateHealthBar();
+    }
+
+    private void UpdateHealthBar()
+    {
+        if (healthBar && healthCanvas)
+        {
+            healthCanvas.gameObject.SetActive(true);
+            healthBar.value = currentHealth / maxHealth;
+        }
+    }
 
     private IEnumerator Die()
     {
         isDead = true;
         if (characterController != null) characterController.enabled = false;
         if (healthCanvas) healthCanvas.gameObject.SetActive(false);
+
+        // Drop Souls only
+        if (soulsPrefab != null && Random.value <= soulsDropChance)
+        {
+            Vector3 dropPosition = new Vector3(transform.position.x, 0, transform.position.z); // force ground level
+            Instantiate(soulsPrefab, dropPosition, Quaternion.identity);
+        }
+
+        // Death animation (pushback and spin)
         Vector3 pushBackDir = (-transform.forward + Vector3.up).normalized;
         float timer = 1f;
         while (timer > 0)
@@ -198,11 +255,44 @@ public class GroundedEnemy : MonoBehaviour, IDamageable
             timer -= Time.deltaTime;
             yield return null;
         }
+
         OnDeath?.Invoke();
         Destroy(gameObject);
     }
 
-    private void UpdateHealthBarPosition() { if (healthCanvas && Camera.main != null) { float enemyHeight = characterController.bounds.extents.y * 2; healthCanvas.transform.position = transform.position + Vector3.up * (enemyHeight + 0.1f); Vector3 cameraForward = Camera.main.transform.forward; cameraForward.y = 0; if (cameraForward != Vector3.zero) { healthCanvas.transform.rotation = Quaternion.LookRotation(cameraForward); } float scaleFactor = enemyHeight * 0.008f; healthCanvas.transform.localScale = Vector3.one * scaleFactor; } }
-    private void HandleHealthBarFade() { if (healthCanvas && healthCanvas.gameObject.activeSelf) { if (healthBarFadeTimer > 0) healthBarFadeTimer -= Time.deltaTime; else healthCanvas.gameObject.SetActive(false); } }
-    private void OnDrawGizmosSelected() { Gizmos.color = Color.red; Gizmos.DrawWireSphere(transform.position, detectionRange); Gizmos.color = Color.yellow; Gizmos.DrawWireSphere(transform.position, attackRange); Gizmos.color = Color.cyan; Gizmos.DrawWireSphere(transform.position, spacingRadius); }
+    private void UpdateHealthBarPosition()
+    {
+        if (healthCanvas && Camera.main != null)
+        {
+            float enemyHeight = characterController.bounds.extents.y * 2;
+            healthCanvas.transform.position = transform.position + Vector3.up * (enemyHeight + 0.1f);
+            Vector3 cameraForward = Camera.main.transform.forward;
+            cameraForward.y = 0;
+            if (cameraForward != Vector3.zero)
+            {
+                healthCanvas.transform.rotation = Quaternion.LookRotation(cameraForward);
+            }
+            float scaleFactor = enemyHeight * 0.008f;
+            healthCanvas.transform.localScale = Vector3.one * scaleFactor;
+        }
+    }
+
+    private void HandleHealthBarFade()
+    {
+        if (healthCanvas && healthCanvas.gameObject.activeSelf)
+        {
+            if (healthBarFadeTimer > 0) healthBarFadeTimer -= Time.deltaTime;
+            else healthCanvas.gameObject.SetActive(false);
+        }
+    }
+
+    private void OnDrawGizmosSelected()
+    {
+        Gizmos.color = Color.red;
+        Gizmos.DrawWireSphere(transform.position, detectionRange);
+        Gizmos.color = Color.yellow;
+        Gizmos.DrawWireSphere(transform.position, attackRange);
+        Gizmos.color = Color.cyan;
+        Gizmos.DrawWireSphere(transform.position, spacingRadius);
+    }
 }

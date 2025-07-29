@@ -3,8 +3,15 @@ using UnityEngine;
 
 public class PlayerInventory : MonoBehaviour
 {
-    public List<ItemData> items = new List<ItemData>();
+    private int hellstone;
+    private int soul;
+    private int divineDew;
 
+    public void AddSoul(int amount) { soul += amount; }
+    public void AddHellstone(int amount) { hellstone += amount; }
+
+    public List<ItemData> items = new List<ItemData>();
+   
     public void AddItem(ItemData item)
     {
         items.Add(item);
@@ -18,4 +25,11 @@ public class PlayerInventory : MonoBehaviour
     }
 
     public int ItemCount => items.Count;
+
+    public void AddDivineDew(int amount)
+    {
+        divineDew += amount;
+        Debug.Log("Divine Dew now: " + divineDew);
+    }
+
 }
