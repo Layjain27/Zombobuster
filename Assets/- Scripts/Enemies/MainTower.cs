@@ -25,10 +25,8 @@ public class MainTower : MonoBehaviour
     private float waveStartTime;
     private List<MiniTower> activeMiniTowers;
 
-    // --- NEW: Reference to health component ---
     private TowerHealth towerHealth;
 
-    // --- NEW: Public method for MiniTowers to report their destruction ---
     public void ReportMiniTowerDestroyed(MiniTower destroyedTower)
     {
         if (activeMiniTowers.Contains(destroyedTower))
@@ -40,7 +38,6 @@ public class MainTower : MonoBehaviour
 
     private void Awake()
     {
-        // --- NEW: Get health component and subscribe to its OnDeath event ---
         towerHealth = GetComponent<TowerHealth>();
         towerHealth.OnDeath += HandleDeath;
 
@@ -51,43 +48,23 @@ public class MainTower : MonoBehaviour
         }
     }
 
-    // --- NEW: This method is called when the MainTower's health reaches zero ---
-    // In MainTower.cs
-
     private void HandleDeath()
     {
-        // 1. Unsubscribe from the event to prevent any errors.
         towerHealth.OnDeath -= HandleDeath;
-
-        // 2. Log the game over event.
         Debug.Log("<color=red>GAME OVER! The Main Tower has been destroyed.</color>");
-
-        // 3. Stop the MainTower from spawning any new waves.
         StopAllCoroutines();
 
-        // 4. NEW: Trigger the destruction of all remaining MiniTowers.
-        // We loop backwards because the activeMiniTowers list will be modified as each tower is destroyed.
         for (int i = activeMiniTowers.Count - 1; i >= 0; i--)
         {
-            // Check if the tower in the list actually exists before trying to destroy it.
             if (activeMiniTowers[i] != null)
             {
-                // Get its health component...
                 TowerHealth miniTowerHealth = activeMiniTowers[i].GetComponent<TowerHealth>();
                 if (miniTowerHealth != null)
                 {
-                    // ...and deal fatal damage to trigger its own full death sequence (sounds, effects, etc.).
                     miniTowerHealth.TakeDamage(float.MaxValue);
                 }
             }
         }
-
-        // 5. REMOVED: The line that pauses the game. The game will now continue.
-        // Time.timeScale = 0f; 
-
-        // You can still activate a "Game Over" UI canvas here if you want the player to see it
-        // while the remaining enemies are on screen.
-        // For example: if (gameOverCanvas) gameOverCanvas.SetActive(true);
     }
 
     private void Start()
@@ -121,8 +98,6 @@ public class MainTower : MonoBehaviour
         StartCoroutine(ManageWaves());
     }
 
-    // ... The rest of your MainTower script (ManageWaves, SpawnEnemiesForSubWave, etc.) remains unchanged ...
-    // ... (Paste your existing methods here) ...
     private IEnumerator ManageWaves()
     {
         Debug.Log($"{gameObject.name}: ManageWaves coroutine started.");
@@ -141,7 +116,10 @@ public class MainTower : MonoBehaviour
                 float gapTime = currentWaveDefinition.gapBetweenSubWaves;
                 Debug.Log($"{gameObject.name}: Main Tower waiting {gapTime}s for sub-wave {subWavesSpawned + 1}/{currentWaveDefinition.subWaveCount}.");
                 yield return new WaitForSeconds(gapTime);
-                SpawnEnemiesForSubWave(currentWaveDefinition);
+
+                // --- UPDATED: We now start a coroutine for the sub-wave and wait for it to complete. ---
+                yield return StartCoroutine(SpawnEnemiesForSubWave(currentWaveDefinition));
+
                 subWavesSpawned++;
             }
 
@@ -170,30 +148,39 @@ public class MainTower : MonoBehaviour
         Debug.Log("<color=blue>All waves complete!</color>");
     }
 
-    private void SpawnEnemiesForSubWave(WaveDefinition waveDef)
+    // --- UPDATED: This is now a coroutine to allow for staggered spawning. ---
+    private IEnumerator SpawnEnemiesForSubWave(WaveDefinition waveDef)
     {
-        if (zombiesSpawnedInCurrentWaveGlobal >= waveDef.maxZombiesForThisWave) return;
-        if (GameMetrics.totalActiveEnemies >= GameMetrics.GLOBAL_MAX_ACTIVE_ENEMIES) return;
+        if (zombiesSpawnedInCurrentWaveGlobal >= waveDef.maxZombiesForThisWave) yield break;
+        if (GameMetrics.totalActiveEnemies >= GameMetrics.GLOBAL_MAX_ACTIVE_ENEMIES) yield break;
 
         int enemiesToSpawnThisSubWave = waveDef.zombiesPerSubWave;
         enemiesToSpawnThisSubWave = Mathf.Min(enemiesToSpawnThisSubWave, waveDef.maxZombiesForThisWave - zombiesSpawnedInCurrentWaveGlobal);
         enemiesToSpawnThisSubWave = Mathf.Min(enemiesToSpawnThisSubWave, GameMetrics.GLOBAL_MAX_ACTIVE_ENEMIES - GameMetrics.totalActiveEnemies);
 
-        if (enemiesToSpawnThisSubWave <= 0) return;
+        if (enemiesToSpawnThisSubWave <= 0) yield break;
 
-        Debug.Log($"<color=green>{gameObject.name}: Instructing towers to spawn {enemiesToSpawnThisSubWave} enemies.</color>");
+        // --- NEW: Calculate the delay between each spawn to spread them out over the stagger duration. ---
+        // This uses the new 'subWaveStaggerDuration' variable you should add to your WaveDefinition script.
+        float staggerDuration = waveDef.subWaveStaggerDuration;
+        float delayBetweenSpawns = (staggerDuration > 0 && enemiesToSpawnThisSubWave > 1) ? staggerDuration / enemiesToSpawnThisSubWave : 0f;
 
+        Debug.Log($"<color=cyan>{gameObject.name}: Instructing towers to spawn {enemiesToSpawnThisSubWave} enemies over {staggerDuration} seconds.</color>");
+
+        // --- NEW: The spawning logic is now in a loop that yields (pauses) between spawns. ---
         if (activeMiniTowers.Count > 0)
         {
             int towerCount = activeMiniTowers.Count;
             int currentTowerIndex = 0;
             for (int i = 0; i < enemiesToSpawnThisSubWave; i++)
             {
+                // Re-check limits inside the loop in case they are reached mid-spawn.
                 if (GameMetrics.totalActiveEnemies >= GameMetrics.GLOBAL_MAX_ACTIVE_ENEMIES ||
                     zombiesSpawnedInCurrentWaveGlobal >= waveDef.maxZombiesForThisWave)
                 {
                     break;
                 }
+
                 MiniTower tower = activeMiniTowers[currentTowerIndex];
                 if (tower != null)
                 {
@@ -201,12 +188,19 @@ public class MainTower : MonoBehaviour
                     zombiesSpawnedInCurrentWaveGlobal++;
                 }
                 currentTowerIndex = (currentTowerIndex + 1) % towerCount;
+
+                // Wait before spawning the next enemy in the sub-wave.
+                if (delayBetweenSpawns > 0)
+                {
+                    yield return new WaitForSeconds(delayBetweenSpawns);
+                }
             }
         }
-        else
+        else // Fallback spawning for the Main Tower
         {
             Debug.LogWarning($"{gameObject.name}: No active MiniTowers. MainTower spawning directly.");
-            if (waveDef.enemyPrefab == null) return;
+            if (waveDef.enemyPrefab == null) yield break;
+
             for (int i = 0; i < enemiesToSpawnThisSubWave; i++)
             {
                 if (GameMetrics.totalActiveEnemies >= GameMetrics.GLOBAL_MAX_ACTIVE_ENEMIES ||
@@ -214,6 +208,7 @@ public class MainTower : MonoBehaviour
                 {
                     break;
                 }
+
                 Vector3 spawnPosition = GetRandomSpawnPosition(spawnRadius);
                 GameObject newEnemy = Instantiate(waveDef.enemyPrefab, spawnPosition, Quaternion.identity);
                 GroundedEnemy enemyScript = newEnemy.GetComponent<GroundedEnemy>();
@@ -228,6 +223,12 @@ public class MainTower : MonoBehaviour
                     Destroy(newEnemy);
                 }
                 zombiesSpawnedInCurrentWaveGlobal++;
+
+                // Wait before spawning the next enemy.
+                if (delayBetweenSpawns > 0)
+                {
+                    yield return new WaitForSeconds(delayBetweenSpawns);
+                }
             }
         }
     }

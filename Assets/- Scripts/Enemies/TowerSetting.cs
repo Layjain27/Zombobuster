@@ -8,7 +8,7 @@ public class TowerSettings : ScriptableObject
     public int maxEnemiesToSpawn = 20; // Total enemies the tower can spawn before stopping
     public int maxEnemiesPerWave = 5; // Max number of enemies per wave
     public float enemySpawnInterval = 5f; // Time between enemy spawns
-
+    public float subWaveStaggerDuration = 3f;
     // Add other shared settings here if needed, e.g., default enemy prefabs
     // public List<GameObject> defaultEnemyPrefabs;
 }

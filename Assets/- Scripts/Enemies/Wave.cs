@@ -1,29 +1,34 @@
-// WaveDefinition.cs
+// Filename: WaveDefinition.cs
 using UnityEngine;
-using System.Collections.Generic; // Make sure this is included if you have lists/dictionaries
 
-[CreateAssetMenu(fileName = "NewWaveDefinition", menuName = "Wave System/Wave Definition")]
+[CreateAssetMenu(fileName = "New Wave Definition", menuName = "Tower Defense/Wave Definition")]
 public class WaveDefinition : ScriptableObject
 {
-    [Header("Wave Info")]
+    [Header("Wave Identification")]
+    [Tooltip("A descriptive name for this wave (e.g., 'Wave 1 - Grunts').")]
     public string waveName = "New Wave";
-    public GameObject enemyPrefab; // The specific enemy prefab for this wave
-    public float zombieHP = 100f; // HP for enemies in this wave
 
-    [Header("Wave Spawning Parameters")]
-    public int subWaveCount = 5; // Number of "bursts" of enemies within this wave
-    public int zombiesPerSubWave = 6; // Number of zombies to spawn in each sub-wave burst
-    public int maxZombiesForThisWave = 30; // Total zombies to spawn for this ENTIRE wave across all sub-waves and towers
+    [Header("Wave Timing and Structure")]
+    [Tooltip("The total duration of the wave in seconds. Spawning will stop after this time.")]
+    public float waveDuration = 60f;
+    [Tooltip("The time in seconds to wait after this wave ends before the next one begins.")]
+    public float gapBetweenEachWave = 10f;
+    [Tooltip("The number of sub-waves (bursts of enemies) within this main wave.")]
+    public int subWaveCount = 3;
+    [Tooltip("The time in seconds to wait between each sub-wave.")]
+    public float gapBetweenSubWaves = 5f;
 
-    [Header("Wave Timing")]
-    public float gapBetweenSubWaves = 2f; // Time between each sub-wave burst
-    public float waveDuration = 300f; // Total time this wave lasts (e.g., 300 seconds = 5 minutes)
+    [Header("Enemy Spawning")]
+    [Tooltip("The enemy prefab to spawn for this wave.")]
+    public GameObject enemyPrefab;
+    [Tooltip("The maximum number of enemies that can be spawned in total for this entire wave.")]
+    public int maxZombiesForThisWave = 50;
+    [Tooltip("The number of enemies to spawn in each individual sub-wave.")]
+    public int zombiesPerSubWave = 10;
+    [Tooltip("The health points for each enemy spawned in this wave.")]
+    public float zombieHP = 100f;
 
-    // NEW: This is the missing field!
-    public float gapBetweenEachWave = 10f; // Time between the end of THIS wave and the start of the NEXT wave
-
-    // You might add more properties like:
-    // public float enemySpeedMultiplier = 1f;
-    // public List<GameObject> miniBossPrefabs;
-    // public float bonusMoneyOnCompletion;
+    [Header("Sub-Wave Spawning (Staggering)")]
+    [Tooltip("The total time in seconds over which to spawn all enemies in a single sub-wave. A value of 0 will spawn them all at once.")]
+    public float subWaveStaggerDuration = 3f;
 }
