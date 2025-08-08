@@ -4,6 +4,9 @@ using UnityEngine.UI;
 
 public class GroundedEnemy : MonoBehaviour, IDamageable
 {
+    [Header("Identity")]
+    public Faction faction; // --- NEW: Added faction variable ---
+
     [Header("Movement Settings")]
     public float speed = 3f;
     public float gravity = -9.81f;
@@ -55,6 +58,8 @@ public class GroundedEnemy : MonoBehaviour, IDamageable
 
     private void Start()
     {
+        faction = Faction.Enemy; // --- NEW: Automatically set this to Enemy ---
+
         GameObject playerObj = GameObject.FindGameObjectWithTag("Player");
         if (playerObj != null) player = playerObj.transform;
         else Debug.LogError("Player with tag 'Player' not found!");
@@ -121,35 +126,15 @@ public class GroundedEnemy : MonoBehaviour, IDamageable
                 IDamageable targetHealth = currentTarget.GetComponent<IDamageable>();
                 if (targetHealth != null)
                 {
-                    bool isPlayerDead = false;
-                    if (currentTarget == player)
-                    {
-                        PlayerNIS playerScript = player.GetComponent<PlayerNIS>();
-                        if (playerScript != null && playerScript.IsDead)
-                        {
-                            isPlayerDead = true;
-                        }
-                    }
-
-                    if (!isPlayerDead)
-                    {
-                        targetHealth.TakeDamage(attackDamage);
-                        attackTimer = attackCooldown;
-                        postAttackTimer = postAttackPause;
-                    }
+                    targetHealth.TakeDamage(attackDamage);
+                    attackTimer = attackCooldown;
+                    postAttackTimer = postAttackPause;
                 }
             }
         }
         else
         {
-            if (currentTarget == player && IsAttackPositionBlocked())
-            {
-                MoveAroundPlayer();
-            }
-            else
-            {
-                MoveTowards(currentTarget.position);
-            }
+            MoveTowards(currentTarget.position);
         }
     }
 
@@ -160,29 +145,6 @@ public class GroundedEnemy : MonoBehaviour, IDamageable
         direction.y = 0;
         characterController.Move(direction * speed * Time.deltaTime);
         if (direction != Vector3.zero) { transform.forward = direction; }
-    }
-
-    private void MoveAroundPlayer()
-    {
-        if (player == null || characterController == null) return;
-        Vector3 directionToPlayer = (player.position - transform.position).normalized;
-        Vector3 strafeDirection = Vector3.Cross(Vector3.up, directionToPlayer);
-        Vector3 offset = strafeDirection * (Random.value > 0.5f ? 1 : -1) * spacingRadius;
-        Vector3 strafeTarget = player.position + offset;
-        Vector3 direction = (strafeTarget - transform.position).normalized;
-        direction.y = 0;
-        characterController.Move(direction * speed * Time.deltaTime);
-        if (direction != Vector3.zero) { transform.forward = direction; }
-    }
-
-    private bool IsAttackPositionBlocked()
-    {
-        Collider[] colliders = Physics.OverlapSphere(transform.position, spacingRadius, enemyLayer);
-        foreach (var col in colliders)
-        {
-            if (col != null && col.transform != transform) return true;
-        }
-        return false;
     }
 
     private void ApplyGravity()
@@ -199,11 +161,6 @@ public class GroundedEnemy : MonoBehaviour, IDamageable
     }
 
     public void TakeDamage(float damage)
-    {
-        TakeDamage(damage, transform.position);
-    }
-
-    public void TakeDamage(float damage, Vector3 hitPoint)
     {
         if (isDead) return;
         currentHealth -= damage;
@@ -238,14 +195,12 @@ public class GroundedEnemy : MonoBehaviour, IDamageable
         if (characterController != null) characterController.enabled = false;
         if (healthCanvas) healthCanvas.gameObject.SetActive(false);
 
-        // Drop Souls only
         if (soulsPrefab != null && Random.value <= soulsDropChance)
         {
-            Vector3 dropPosition = new Vector3(transform.position.x, 0, transform.position.z); // force ground level
+            Vector3 dropPosition = new Vector3(transform.position.x, 0, transform.position.z);
             Instantiate(soulsPrefab, dropPosition, Quaternion.identity);
         }
 
-        // Death animation (pushback and spin)
         Vector3 pushBackDir = (-transform.forward + Vector3.up).normalized;
         float timer = 1f;
         while (timer > 0)

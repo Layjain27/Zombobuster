@@ -1,23 +1,20 @@
-// GameMetrics.cs
+// Filename: GameMetrics.cs
+using UnityEngine;
+
 public static class GameMetrics
 {
-    public const int GLOBAL_MAX_ACTIVE_ENEMIES = 30; // Total enemies all towers combined can have active at once
-    public static int totalActiveEnemies = 0; // Tracks total active enemies in the scene
+    // You can adjust this global cap in your code.
+    public const int GLOBAL_MAX_ACTIVE_ENEMIES = 50;
 
-    // This static method is called by GroundedEnemy when it dies
-    public static void DecrementActiveEnemies()
-    {
-        if (totalActiveEnemies > 0)
-        {
-            totalActiveEnemies--;
-            // Debug.Log($"Enemy died. Total active enemies: {totalActiveEnemies}"); // Uncomment for debugging
-        }
-    }
+    public static int totalActiveEnemies = 0;
 
-    // Call this at the start of your game or scene to ensure it's reset
+    // --- NEW: Tracks the health reduction percentage for newly spawned enemies. ---
+    public static float enemyHealthDebuffPercentage = 0f;
+
     public static void ResetMetrics()
     {
         totalActiveEnemies = 0;
-        // Debug.Log("GameMetrics reset: totalActiveEnemies = 0."); // Uncomment for debugging
+        // --- NEW: Ensure the debuff is reset when the game starts. ---
+        enemyHealthDebuffPercentage = 0f;
     }
 }
