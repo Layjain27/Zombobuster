@@ -3,7 +3,7 @@ using UnityEngine;
 
 public class PlayerInventory : MonoBehaviour
 {
-    private int hellstone;
+    public int hellstone;
     private int soul;
     private int divineDew;
 

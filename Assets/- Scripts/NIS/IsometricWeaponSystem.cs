@@ -373,32 +373,32 @@ public class IsometricWeaponSystem : MonoBehaviour
     }
 }
 
-[System.Serializable]
-public class WeaponStats
-{
-    public float fireRate = 1f;
-    public int maxAmmo = 10;
-    public float reloadTime = 2f;
-    public float range = 50f;
-    public float meleeRange = 2f;
-    public float spread = 0.1f;
-    public int shotgunPellets = 6;
-    public int damage = 10; // Default damage, can be changed per weapon
+//[System.Serializable]
+//public class WeaponStats
+//{
+//    public float fireRate = 1f;
+//    public int maxAmmo = 10;
+//    public float reloadTime = 2f;
+//    public float range = 50f;
+//    public float meleeRange = 2f;
+//    public float spread = 0.1f;
+//    public int shotgunPellets = 6;
+//    public int damage = 10; // Default damage, can be changed per weapon
 
-    public float sphereRadius = 0.2f; // Adjust for desired hitbox size
+//    public float sphereRadius = 0.2f; // Adjust for desired hitbox size
 
-    public AudioClip shootSound;
-    public AudioClip reloadSound;
+//    public AudioClip shootSound;
+//    public AudioClip reloadSound;
 
-    [Header("Knockback")]
-    public float knockbackForce = 10f; // How strong the knockback is for this weapon
-    // Note: knockbackDuration and knockbackLerpSpeed are now controlled by the enemy script
-}
+//    [Header("Knockback")]
+//    public float knockbackForce = 10f; // How strong the knockback is for this weapon
+//    // Note: knockbackDuration and knockbackLerpSpeed are now controlled by the enemy script
+//}
 
-public enum WeaponType
-{
-    Melee,
-    Pistol,
-    Shotgun,
-    Rifle
-}
+//public enum WeaponType
+//{
+//    Melee,
+//    Pistol,
+//    Shotgun,
+//    Rifle
+//}
