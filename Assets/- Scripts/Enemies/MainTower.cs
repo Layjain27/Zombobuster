@@ -4,21 +4,12 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 
+// This line ensures the TowerHealth script is automatically added.
 [RequireComponent(typeof(TowerHealth))]
 public class MainTower : MonoBehaviour
 {
     [Header("General Tower Settings")]
     public float spawnRadius = 3f;
-
-    [Header("Gameplay Settings")]
-    [Tooltip("Percentage of max health the Main Tower loses when a Mini Tower is destroyed.")]
-    [Range(0f, 100f)]
-    public float damagePercentOnMiniTowerLoss = 5f;
-
-    // --- NEW: Public variable for the enemy debuff percentage ---
-    [Tooltip("The stacking percentage of health reduction enemies receive when a Mini Tower is destroyed.")]
-    [Range(0f, 25f)]
-    public float enemyDebuffPercentPerTowerLoss = 5f;
 
     [Header("Shared Tower Configuration")]
     [Tooltip("Assign a ScriptableObject containing shared tower settings.")]
@@ -42,23 +33,9 @@ public class MainTower : MonoBehaviour
         {
             activeMiniTowers.Remove(destroyedTower);
             Debug.Log($"<color=yellow>{destroyedTower.name} was destroyed. {activeMiniTowers.Count} MiniTowers remain.</color>");
-
-            // 1. Damage the Main Tower
-            if (towerHealth != null)
-            {
-                float damageMultiplier = damagePercentOnMiniTowerLoss / 100f;
-                float damageToDeal = towerHealth.MaxHealth * damageMultiplier;
-                towerHealth.TakeDamage(damageToDeal);
-            }
-
-            // 2. --- UPDATED: Use the public variable to increase the enemy debuff ---
-            GameMetrics.enemyHealthDebuffPercentage += enemyDebuffPercentPerTowerLoss;
-            GameMetrics.enemyHealthDebuffPercentage = Mathf.Clamp(GameMetrics.enemyHealthDebuffPercentage, 0f, 95f);
-            Debug.Log($"<color=purple>Enemy debuff increased! All upcoming enemies will spawn with {GameMetrics.enemyHealthDebuffPercentage}% reduced health.</color>");
         }
     }
 
-    // ... (The rest of the MainTower script remains unchanged) ...
     private void Awake()
     {
         towerHealth = GetComponent<TowerHealth>();
@@ -140,6 +117,7 @@ public class MainTower : MonoBehaviour
                 Debug.Log($"{gameObject.name}: Main Tower waiting {gapTime}s for sub-wave {subWavesSpawned + 1}/{currentWaveDefinition.subWaveCount}.");
                 yield return new WaitForSeconds(gapTime);
 
+                // --- UPDATED: We now start a coroutine for the sub-wave and wait for it to complete. ---
                 yield return StartCoroutine(SpawnEnemiesForSubWave(currentWaveDefinition));
 
                 subWavesSpawned++;
@@ -170,6 +148,7 @@ public class MainTower : MonoBehaviour
         Debug.Log("<color=blue>All waves complete!</color>");
     }
 
+    // --- UPDATED: This is now a coroutine to allow for staggered spawning. ---
     private IEnumerator SpawnEnemiesForSubWave(WaveDefinition waveDef)
     {
         if (zombiesSpawnedInCurrentWaveGlobal >= waveDef.maxZombiesForThisWave) yield break;
@@ -181,37 +160,36 @@ public class MainTower : MonoBehaviour
 
         if (enemiesToSpawnThisSubWave <= 0) yield break;
 
+        // --- NEW: Calculate the delay between each spawn to spread them out over the stagger duration. ---
+        // This uses the new 'subWaveStaggerDuration' variable you should add to your WaveDefinition script.
         float staggerDuration = waveDef.subWaveStaggerDuration;
         float delayBetweenSpawns = (staggerDuration > 0 && enemiesToSpawnThisSubWave > 1) ? staggerDuration / enemiesToSpawnThisSubWave : 0f;
 
         Debug.Log($"<color=cyan>{gameObject.name}: Instructing towers to spawn {enemiesToSpawnThisSubWave} enemies over {staggerDuration} seconds.</color>");
 
+        // --- NEW: The spawning logic is now in a loop that yields (pauses) between spawns. ---
         if (activeMiniTowers.Count > 0)
         {
+            int towerCount = activeMiniTowers.Count;
             int currentTowerIndex = 0;
             for (int i = 0; i < enemiesToSpawnThisSubWave; i++)
             {
+                // Re-check limits inside the loop in case they are reached mid-spawn.
                 if (GameMetrics.totalActiveEnemies >= GameMetrics.GLOBAL_MAX_ACTIVE_ENEMIES ||
                     zombiesSpawnedInCurrentWaveGlobal >= waveDef.maxZombiesForThisWave)
                 {
                     break;
                 }
 
-                if (activeMiniTowers.Count == 0)
-                {
-                    Debug.LogWarning("All MiniTowers destroyed mid-spawn. Aborting sub-wave.");
-                    break;
-                }
-
-                currentTowerIndex %= activeMiniTowers.Count;
                 MiniTower tower = activeMiniTowers[currentTowerIndex];
                 if (tower != null)
                 {
                     tower.SpawnEnemiesAtThisTower(waveDef.enemyPrefab, waveDef.zombieHP, 1);
                     zombiesSpawnedInCurrentWaveGlobal++;
                 }
-                currentTowerIndex++;
+                currentTowerIndex = (currentTowerIndex + 1) % towerCount;
 
+                // Wait before spawning the next enemy in the sub-wave.
                 if (delayBetweenSpawns > 0)
                 {
                     yield return new WaitForSeconds(delayBetweenSpawns);
@@ -234,23 +212,19 @@ public class MainTower : MonoBehaviour
                 Vector3 spawnPosition = GetRandomSpawnPosition(spawnRadius);
                 GameObject newEnemy = Instantiate(waveDef.enemyPrefab, spawnPosition, Quaternion.identity);
                 GroundedEnemy enemyScript = newEnemy.GetComponent<GroundedEnemy>();
-
                 if (enemyScript != null)
                 {
-                    float healthMultiplier = 1.0f - (GameMetrics.enemyHealthDebuffPercentage / 100f);
-                    float finalHealth = waveDef.zombieHP * healthMultiplier;
-                    enemyScript.SetHealth(finalHealth);
-
+                    enemyScript.SetHealth(waveDef.zombieHP);
                     enemyScript.OnDeath += () => GameMetrics.totalActiveEnemies--;
                     GameMetrics.totalActiveEnemies++;
                 }
                 else
                 {
-                    Debug.LogWarning($"Spawned enemy does not have a GroundedEnemy script!", newEnemy);
                     Destroy(newEnemy);
                 }
                 zombiesSpawnedInCurrentWaveGlobal++;
 
+                // Wait before spawning the next enemy.
                 if (delayBetweenSpawns > 0)
                 {
                     yield return new WaitForSeconds(delayBetweenSpawns);

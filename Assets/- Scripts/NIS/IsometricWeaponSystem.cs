@@ -38,7 +38,7 @@ public class IsometricWeaponSystem : MonoBehaviour
     public float recoilResetSpeed = 5f;
 
     [Header("Bullet Trail Settings")]
-    public GameObject bulletTrailPrefab;
+    public GameObject bulletTrailPrefab; // Assign a trail prefab in Inspector
     public float trailSpeed = 50f;
     public float trailLifetime = 0.5f;
 
@@ -138,6 +138,8 @@ public class IsometricWeaponSystem : MonoBehaviour
         Collider[] hits = Physics.OverlapSphere(currentShootOrigin.position, activeWeapon.meleeRange, hitLayers);
         foreach (var hit in hits)
         {
+            Debug.Log($"Melee hit: {hit.gameObject.name}");
+            // Pass player's position for knockback calculation
             HandleEnemyHit(hit, transform.position);
         }
     }
@@ -147,6 +149,8 @@ public class IsometricWeaponSystem : MonoBehaviour
         Ray ray = new Ray(currentShootOrigin.position, transform.forward);
         if (Physics.SphereCast(ray, activeWeapon.sphereRadius, out RaycastHit hit, activeWeapon.range, hitLayers))
         {
+            Debug.Log($"Hit: {hit.collider.name}");
+            // Pass player's position for knockback calculation
             HandleEnemyHit(hit.collider, transform.position);
             CreateBulletTrail(currentShootOrigin.position, hit.point);
         }
@@ -161,13 +165,15 @@ public class IsometricWeaponSystem : MonoBehaviour
         for (int i = 0; i < activeWeapon.shotgunPellets; i++)
         {
             Vector3 spread = transform.forward +
-                                 new Vector3(Random.Range(-activeWeapon.spread, activeWeapon.spread),
-                                             0,
-                                             Random.Range(-activeWeapon.spread, activeWeapon.spread));
+                                     new Vector3(Random.Range(-activeWeapon.spread, activeWeapon.spread),
+                                                 0,
+                                                 Random.Range(-activeWeapon.spread, activeWeapon.spread));
 
             Ray ray = new Ray(currentShootOrigin.position, spread.normalized);
             if (Physics.SphereCast(ray, activeWeapon.sphereRadius, out RaycastHit hit, activeWeapon.range, hitLayers))
             {
+                Debug.Log($"Shotgun hit: {hit.collider.name}");
+                // Pass player's position for knockback calculation
                 HandleEnemyHit(hit.collider, transform.position);
                 CreateBulletTrail(currentShootOrigin.position, hit.point);
             }
@@ -178,30 +184,25 @@ public class IsometricWeaponSystem : MonoBehaviour
         }
     }
 
-    // --- THIS IS THE MODIFIED FUNCTION ---
+    // In IsometricWeaponSystem.cs
+
     void HandleEnemyHit(Collider collider, Vector3 attackerPosition)
     {
-        // First, check if the thing we hit can even take damage.
+        // --- UPDATED: Using GetComponentInParent is more robust ---
+        // This looks for the component on the object hit AND any of its parents.
         IDamageable damageableTarget = collider.GetComponentInParent<IDamageable>();
-        if (damageableTarget == null)
-        {
-            // It's just a wall or the floor, so do nothing.
-            return;
-        }
 
-        // --- THE FRIENDLY FIRE CHECK ---
-        // Now, check if this damageable object is a friendly player tower.
-        TowerHealth friendlyTower = collider.GetComponentInParent<TowerHealth>();
-        if (friendlyTower != null && friendlyTower.faction == Faction.Player)
+        if (damageableTarget != null)
         {
-            // We hit a friendly tower! Do NOT deal damage.
-            Debug.Log("Hit a friendly player tower. No damage dealt.");
-            return;
+            // If we found something damageable (an Enemy or a Tower), deal damage to it.
+            Debug.Log($"Successfully found IDamageable on {collider.gameObject.name}'s parent, dealing damage.");
+            damageableTarget.TakeDamage(activeWeapon.damage);
         }
-
-        // --- If we passed the checks, it must be an enemy. Deal damage. ---
-        Debug.Log($"Dealing {activeWeapon.damage} damage to {collider.gameObject.name}.");
-        damageableTarget.TakeDamage(activeWeapon.damage);
+        else
+        {
+            // Add this log to see what you're hitting if it's not working.
+            Debug.LogWarning($"Bullet hit {collider.gameObject.name}, but no IDamageable component was found on it or its parents.");
+        }
     }
 
 
@@ -212,6 +213,7 @@ public class IsometricWeaponSystem : MonoBehaviour
 
         isReloading = true;
 
+        // Play reload sound using the dedicated reload AudioSource
         if (activeWeapon.reloadSound)
         {
             reloadSounds.clip = activeWeapon.reloadSound;
@@ -241,13 +243,17 @@ public class IsometricWeaponSystem : MonoBehaviour
 
     void SwitchWeapon(WeaponType newWeapon)
     {
+        // Cancel the reload process if it's running
         if (isReloading)
         {
             StopCoroutine(Reload());
             isReloading = false;
+
+            // Stop only the reload sound if it's playing
             reloadSounds.Stop();
         }
 
+        // Play the weapon switch sound
         PlaySound(weaponSwitchSound);
 
         currentWeaponType = newWeapon;
@@ -365,4 +371,34 @@ public class IsometricWeaponSystem : MonoBehaviour
 
         Destroy(trail, trailLifetime);
     }
+}
+
+[System.Serializable]
+public class WeaponStats
+{
+    public float fireRate = 1f;
+    public int maxAmmo = 10;
+    public float reloadTime = 2f;
+    public float range = 50f;
+    public float meleeRange = 2f;
+    public float spread = 0.1f;
+    public int shotgunPellets = 6;
+    public int damage = 10; // Default damage, can be changed per weapon
+
+    public float sphereRadius = 0.2f; // Adjust for desired hitbox size
+
+    public AudioClip shootSound;
+    public AudioClip reloadSound;
+
+    [Header("Knockback")]
+    public float knockbackForce = 10f; // How strong the knockback is for this weapon
+    // Note: knockbackDuration and knockbackLerpSpeed are now controlled by the enemy script
+}
+
+public enum WeaponType
+{
+    Melee,
+    Pistol,
+    Shotgun,
+    Rifle
 }

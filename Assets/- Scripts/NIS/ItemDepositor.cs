@@ -1,0 +1,52 @@
+using UnityEngine;
+using UnityEngine.UI;
+using UnityEngine.InputSystem;
+
+public class ItemDepositor : MonoBehaviour
+{
+    private bool isInDepositZone = false;
+    private PlayerInventory inventory;
+
+    [Header("UI Reference")]
+    public GameObject depositPromptUI; // Drag your DepositPrompt UI here
+
+    private void Start()
+    {
+        inventory = GetComponent<PlayerInventory>();
+        if (depositPromptUI != null)
+            depositPromptUI.SetActive(false); // Hide at start
+    }
+
+    private void Update()
+    {
+        if (isInDepositZone && Keyboard.current.eKey.wasPressedThisFrame)
+        {
+            Debug.Log("Deposited " + inventory.ItemCount + " items!");
+            inventory.ClearInventory();
+
+            // Optional: Feedback
+            if (depositPromptUI != null)
+                depositPromptUI.SetActive(false);
+        }
+    }
+
+    private void OnTriggerEnter(Collider other)
+    {
+        if (other.CompareTag("DepositZone"))
+        {
+            isInDepositZone = true;
+            if (depositPromptUI != null)
+                depositPromptUI.SetActive(true);
+        }
+    }
+
+    private void OnTriggerExit(Collider other)
+    {
+        if (other.CompareTag("DepositZone"))
+        {
+            isInDepositZone = false;
+            if (depositPromptUI != null)
+                depositPromptUI.SetActive(false);
+        }
+    }
+}

@@ -3,32 +3,35 @@ using UnityEngine;
 public class AutoPickupItem : MonoBehaviour
 {
     public float pickupRadius = 2f;
-    public string itemName; // "Hellstone", "Souls"
-    public int amount = 1;
+    public string itemName; // Only use "Hellstone" or "Souls"
 
     private Transform player;
-    private PlayerInventory playerInventory;
 
     private void Start()
     {
         GameObject playerObj = GameObject.FindGameObjectWithTag("Player");
-        if (playerObj)
-        {
-            player = playerObj.transform;
-            playerInventory = playerObj.GetComponent<PlayerInventory>();
-        }
+        if (playerObj) player = playerObj.transform;
     }
 
     private void Update()
     {
-        if (player == null || playerInventory == null) return;
+        if (player == null) return;
 
         float distance = Vector3.Distance(transform.position, player.position);
         if (distance <= pickupRadius)
         {
-            playerInventory.AddItem(itemName, amount);
-            Destroy(gameObject);
+            if (itemName == "Divine Dew") return; // Block Divine Dew from auto-pickup
+            Pickup();
         }
+    }
+
+    private void Pickup()
+    {
+        Debug.Log($"{itemName} picked up by player!");
+
+        // TODO: Add to inventory (Souls/Hellstone logic here)
+
+        Destroy(gameObject);
     }
 
     private void OnDrawGizmosSelected()

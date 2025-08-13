@@ -3,60 +3,33 @@ using UnityEngine;
 
 public class PlayerInventory : MonoBehaviour
 {
-    private Dictionary<string, int> items = new Dictionary<string, int>();
+    private int hellstone;
+    private int soul;
+    private int divineDew;
 
-    public int hellstoneCount = 0;
+    public void AddSoul(int amount) { soul += amount; }
+    public void AddHellstone(int amount) { hellstone += amount; }
 
-    public void AddHellstone(int amount)
+    public List<ItemData> items = new List<ItemData>();
+   
+    public void AddItem(ItemData item)
     {
-        hellstoneCount += amount;
-        AddItem("Hellstone", amount); // keep dictionary in sync
+        items.Add(item);
+        Debug.Log("Item stored: " + item.itemName);
     }
 
-    public void RemoveHellstone(int amount)
+    public void ClearInventory()
     {
-        hellstoneCount = Mathf.Max(0, hellstoneCount - amount);
-        RemoveItem("Hellstone", amount); // keep dictionary in sync
+        items.Clear();
+        Debug.Log("Inventory cleared");
     }
 
-    public void AddItem(string itemName, int amount)
-    {
-        if (items.ContainsKey(itemName))
-            items[itemName] += amount;
-        else
-            items[itemName] = amount;
+    public int ItemCount => items.Count;
 
-        // If the item is hellstone, sync the counter
-        if (itemName == "Hellstone")
-            hellstoneCount = items[itemName];
+    public void AddDivineDew(int amount)
+    {
+        divineDew += amount;
+        Debug.Log("Divine Dew now: " + divineDew);
     }
 
-    public bool HasItem(string itemName, int requiredAmount)
-    {
-        return items.ContainsKey(itemName) && items[itemName] >= requiredAmount;
-    }
-
-    public bool RemoveItem(string itemName, int amount)
-    {
-        if (HasItem(itemName, amount))
-        {
-            items[itemName] -= amount;
-            if (items[itemName] <= 0)
-                items.Remove(itemName);
-
-            if (itemName == "Hellstone")
-                hellstoneCount = items.ContainsKey(itemName) ? items[itemName] : 0;
-
-            return true;
-        }
-        return false;
-    }
-
-    public void PrintInventory()
-    {
-        foreach (var item in items)
-        {
-            Debug.Log(item.Key + ": " + item.Value);
-        }
-    }
 }

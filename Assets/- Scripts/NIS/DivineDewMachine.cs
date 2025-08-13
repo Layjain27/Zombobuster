@@ -1,100 +1,87 @@
 using UnityEngine;
+using UnityEngine.UI;
 using TMPro;
 
 public class DivineDewMachine : MonoBehaviour
 {
-    [Header("Machine Settings")]
-    public float rechargeTime = 10f; // seconds before next dew
-    public int dewAmount = 1; // how much to give per collect
-    public float detectionRadius = 3f; // range for player detection
+    [Header("Detection Settings")]
+    public float detectionRadius = 3f;
     public string playerTag = "Player";
 
+    [Header("Dew Settings")]
+    public float rechargeTime = 10f;
+    private float rechargeTimer = 0f;
+    private bool canGiveDew = true;
+
     [Header("UI")]
-    public TextMeshProUGUI statusText; // assign TMP text in inspector
-    public Vector3 uiOffset = new Vector3(0, 2f, 0); // offset above machine
+    public Canvas worldSpaceCanvas;
+    public TextMeshProUGUI statusText;
 
-    private float rechargeTimer;
-    private bool isReady = false;
-    private Transform player;
-
-    void Start()
+    private void Start()
     {
-        rechargeTimer = rechargeTime;
         if (statusText != null)
         {
-            statusText.gameObject.SetActive(false); // hide at start
+            statusText.text = "Ready!";
+            worldSpaceCanvas.enabled = false; // Hide UI initially
         }
     }
 
-    void Update()
+    private void Update()
     {
-        // Recharge logic
-        if (!isReady)
+        bool playerInRange = false;
+
+        // Detect player by tag
+        Collider[] hits = Physics.OverlapSphere(transform.position, detectionRadius);
+        foreach (Collider hit in hits)
         {
-            rechargeTimer -= Time.deltaTime;
-            if (rechargeTimer <= 0f)
+            if (hit.CompareTag(playerTag))
             {
-                isReady = true;
-                rechargeTimer = 0f;
+                playerInRange = true;
+
+                if (canGiveDew)
+                {
+                    GiveDewToPlayer(hit.gameObject);
+                    canGiveDew = false;
+                    rechargeTimer = 0f;
+                    statusText.text = "Recharging...";
+                }
+                break;
             }
         }
 
-        // Player detection
-        if (player != null)
+        // Show/hide UI based on proximity
+        if (worldSpaceCanvas != null)
         {
-            statusText.gameObject.SetActive(true);
-            statusText.text = isReady ? "Ready to Collect" : "Recharging...";
-
-            if (isReady)
-            {
-                CollectDew();
-            }
-        }
-        else
-        {
-            if (statusText != null)
-            {
-                statusText.gameObject.SetActive(false);
-            }
+            worldSpaceCanvas.enabled = playerInRange;
         }
 
-        // Keep UI above machine
-        if (statusText != null)
+        // Handle recharge timer
+        if (!canGiveDew)
         {
-            statusText.transform.position = Camera.main.WorldToScreenPoint(transform.position + uiOffset);
+            rechargeTimer += Time.deltaTime;
+            if (rechargeTimer >= rechargeTime)
+            {
+                canGiveDew = true;
+                statusText.text = "Ready!";
+            }
         }
     }
 
-    private void CollectDew()
+    private void GiveDewToPlayer(GameObject player)
     {
         PlayerInventory inventory = player.GetComponent<PlayerInventory>();
         if (inventory != null)
         {
-            inventory.AddItem("DivineDew", dewAmount);
-            Debug.Log($"Player collected {dewAmount} Divine Dew!");
+            inventory.AddDivineDew(1);
+            Debug.Log("Divine Dew deposited into inventory.");
         }
-
-        isReady = false;
-        rechargeTimer = rechargeTime;
-    }
-
-    private void OnTriggerEnter(Collider other)
-    {
-        if (other.CompareTag(playerTag))
+        else
         {
-            player = other.transform;
+            Debug.LogWarning("PlayerInventory not found on player!");
         }
     }
 
-    private void OnTriggerExit(Collider other)
-    {
-        if (other.CompareTag(playerTag))
-        {
-            player = null;
-        }
-    }
-
-    // Optional: visualize detection zone in editor
+    // Optional: visualize detection radius in the editor
     private void OnDrawGizmosSelected()
     {
         Gizmos.color = Color.cyan;
