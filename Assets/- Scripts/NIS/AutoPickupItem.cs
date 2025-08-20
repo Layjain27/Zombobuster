@@ -3,7 +3,6 @@ using UnityEngine;
 public class AutoPickupItem : MonoBehaviour
 {
     public float pickupRadius = 2f;
-    public string itemName; // Only use "Hellstone" or "Souls"
 
     private Transform player;
 
@@ -20,16 +19,20 @@ public class AutoPickupItem : MonoBehaviour
         float distance = Vector3.Distance(transform.position, player.position);
         if (distance <= pickupRadius)
         {
-            if (itemName == "Divine Dew") return; // Block Divine Dew from auto-pickup
-            Pickup();
+            PickupSoul();
         }
     }
 
-    private void Pickup()
+    private void PickupSoul()
     {
-        Debug.Log($"{itemName} picked up by player!");
+        Debug.Log("Soul picked up by player!");
 
-        // TODO: Add to inventory (Souls/Hellstone logic here)
+        // TODO: Add soul to inventory
+        PlayerInventory inventory = player.GetComponent<PlayerInventory>();
+        if (inventory != null)
+        {
+            inventory.AddItem("Souls", 1); // assumes your PlayerInventory has AddItem(string, int)
+        }
 
         Destroy(gameObject);
     }

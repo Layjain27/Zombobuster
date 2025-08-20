@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.InputSystem;
 
@@ -21,13 +21,31 @@ public class ItemDepositor : MonoBehaviour
     {
         if (isInDepositZone && Keyboard.current.eKey.wasPressedThisFrame)
         {
-            Debug.Log("Deposited " + inventory.ItemCount + " items!");
-            inventory.ClearInventory();
-
-            // Optional: Feedback
-            if (depositPromptUI != null)
-                depositPromptUI.SetActive(false);
+            DepositItems();
         }
+    }
+
+    private void DepositItems()
+    {
+        int souls = inventory.GetItemCount("Souls");
+        int hellstone = inventory.GetItemCount("Hellstone");
+        int dew = inventory.GetItemCount("DivineDew");
+
+        if (souls > 0 || hellstone > 0 || dew > 0)
+        {
+            Debug.Log($"Deposited → Souls: {souls}, Hellstone: {hellstone}, DivineDew: {dew}");
+
+            // Here you can add logic to increase NPC upgrade levels, machine fuel, etc.
+
+            inventory.ClearInventory();
+        }
+        else
+        {
+            Debug.Log("No items to deposit!");
+        }
+
+        if (depositPromptUI != null)
+            depositPromptUI.SetActive(false);
     }
 
     private void OnTriggerEnter(Collider other)
