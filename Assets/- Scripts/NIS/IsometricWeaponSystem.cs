@@ -341,7 +341,7 @@ public class IsometricWeaponSystem : MonoBehaviour
 
     private void OnDrawGizmosSelected()
     {
-        if (meleeShootOrigin && currentWeaponType == WeaponType.Melee)
+        if (meleeShootOrigin && currentWeaponType == WeaponType.Melee && activeWeapon != null)
         {
             Gizmos.color = Color.red;
             Gizmos.DrawWireSphere(meleeShootOrigin.position, activeWeapon.meleeRange);
