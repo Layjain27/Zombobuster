@@ -4,20 +4,22 @@ using UnityEngine.UI;
 
 public class TowerBuildPoint : MonoBehaviour
 {
+    [Header("Tower Settings")]
     public GameObject towerPrefab;
     public float buildTime = 5f;
     public int requiredHellstone = 10;
 
     private bool playerInRange = false;
+    private bool isBuilt = false;
     private float holdTimer = 0f;
-    private PlayerInventory playerInventory;
 
+    private PlayerInventory playerInventory;
     private TextMeshProUGUI buildText;
     private Canvas floatingCanvas;
 
     void Start()
     {
-        // Create floating world-space canvas
+        // --- Floating Canvas ---
         GameObject canvasGO = new GameObject("FloatingBuildCanvas");
         floatingCanvas = canvasGO.AddComponent<Canvas>();
         floatingCanvas.renderMode = RenderMode.WorldSpace;
@@ -28,28 +30,27 @@ public class TowerBuildPoint : MonoBehaviour
         canvasGO.transform.SetParent(transform);
         canvasGO.transform.localPosition = new Vector3(0, 2f, 0);
         canvasGO.transform.localRotation = Quaternion.identity;
-        canvasGO.transform.localScale = Vector3.one * 0.01f; // small world scale
+        canvasGO.transform.localScale = Vector3.one * 0.02f;
 
-        // Create text
+        // --- Text ---
         GameObject textGO = new GameObject("BuildText");
         textGO.transform.SetParent(canvasGO.transform, false);
         buildText = textGO.AddComponent<TextMeshProUGUI>();
 
         // Styling
-        buildText.fontSize = 150; // Big
+        buildText.fontSize = 120;
         buildText.alignment = TextAlignmentOptions.Center;
         buildText.color = Color.black;
         buildText.fontStyle = FontStyles.Bold;
-        buildText.enableWordWrapping = false;
         buildText.outlineWidth = 0.3f;
         buildText.outlineColor = Color.white;
+        buildText.enableWordWrapping = false;
 
-        // Stretch text to fit canvas
         RectTransform rt = buildText.GetComponent<RectTransform>();
         rt.sizeDelta = new Vector2(500, 200);
         rt.localPosition = Vector3.zero;
 
-        buildText.enabled = false; // hidden until player enters
+        buildText.enabled = false;
     }
 
     void Update()
@@ -62,7 +63,9 @@ public class TowerBuildPoint : MonoBehaviour
             );
         }
 
-        if (playerInRange && Input.GetKey(KeyCode.E))
+        if (!playerInRange || isBuilt) return;
+
+        if (Input.GetKey(KeyCode.E))
         {
             holdTimer += Time.deltaTime;
             buildText.text = $"Building... {holdTimer:F1}/{buildTime}";
@@ -74,34 +77,33 @@ public class TowerBuildPoint : MonoBehaviour
                 holdTimer = 0f;
             }
         }
-        else if (playerInRange)
-        {
-            buildText.text = "Hold E to build";
-            buildText.enabled = true;
-        }
         else
         {
-            buildText.enabled = false;
+            // Reset UI when player stops holding
             holdTimer = 0f;
+            buildText.text = "Hold E to build";
+            buildText.enabled = true;
         }
     }
 
     private void TryBuildTower()
     {
-        if (playerInventory != null && playerInventory.hellstoneCount >= requiredHellstone)
-        {
-            playerInventory.hellstoneCount -= requiredHellstone;
+        if (playerInventory == null) return;
 
-            // Auto height
+        if (playerInventory.HasHellstone(requiredHellstone))
+        {
+            playerInventory.SpendHellstone(requiredHellstone);
+
             float prefabHeight = GetPrefabHeight(towerPrefab);
             Vector3 spawnPos = transform.position + Vector3.up * (prefabHeight / 2f);
             Instantiate(towerPrefab, spawnPos, Quaternion.identity);
 
-            buildText.text = "Tower Built!";
+            buildText.text = "<color=green>Tower Built!</color>";
+            isBuilt = true; // prevent further builds
         }
         else
         {
-            buildText.text = "<color=black>Not enough Hellstone!</color>";
+            buildText.text = "<color=red>Not enough Hellstone!</color>";
         }
     }
 
@@ -123,8 +125,11 @@ public class TowerBuildPoint : MonoBehaviour
         {
             playerInRange = true;
             playerInventory = other.GetComponent<PlayerInventory>();
-            buildText.text = "Hold E to build";
-            buildText.enabled = true;
+            if (!isBuilt)
+            {
+                buildText.text = "Hold E to build";
+                buildText.enabled = true;
+            }
         }
     }
 
@@ -134,6 +139,7 @@ public class TowerBuildPoint : MonoBehaviour
         {
             playerInRange = false;
             buildText.enabled = false;
+            holdTimer = 0f;
         }
     }
 }

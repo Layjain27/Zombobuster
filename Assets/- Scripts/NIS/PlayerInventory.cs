@@ -3,60 +3,80 @@ using UnityEngine;
 
 public class PlayerInventory : MonoBehaviour
 {
+    // -----------------------------
+    // BACKING STORAGE
+    // -----------------------------
     private Dictionary<string, int> items = new Dictionary<string, int>();
 
-    public int hellstoneCount = 0;
-
-    public void AddHellstone(int amount)
-    {
-        hellstoneCount += amount;
-        AddItem("Hellstone", amount); // keep dictionary in sync
-    }
-
-    public void RemoveHellstone(int amount)
-    {
-        hellstoneCount = Mathf.Max(0, hellstoneCount - amount);
-        RemoveItem("Hellstone", amount); // keep dictionary in sync
-    }
-
+    // -----------------------------
+    // GENERIC ITEM SYSTEM
+    // -----------------------------
     public void AddItem(string itemName, int amount)
     {
-        if (items.ContainsKey(itemName))
-            items[itemName] += amount;
-        else
-            items[itemName] = amount;
+        if (!items.ContainsKey(itemName))
+            items[itemName] = 0;
 
-        // If the item is hellstone, sync the counter
-        if (itemName == "Hellstone")
-            hellstoneCount = items[itemName];
-    }
-
-    public bool HasItem(string itemName, int requiredAmount)
-    {
-        return items.ContainsKey(itemName) && items[itemName] >= requiredAmount;
+        items[itemName] += amount;
+        Debug.Log($"Added {amount} {itemName}. Total: {items[itemName]}");
     }
 
     public bool RemoveItem(string itemName, int amount)
     {
-        if (HasItem(itemName, amount))
+        if (items.ContainsKey(itemName) && items[itemName] >= amount)
         {
             items[itemName] -= amount;
-            if (items[itemName] <= 0)
-                items.Remove(itemName);
-
-            if (itemName == "Hellstone")
-                hellstoneCount = items.ContainsKey(itemName) ? items[itemName] : 0;
-
+            Debug.Log($"Removed {amount} {itemName}. Remaining: {items[itemName]}");
             return true;
         }
         return false;
     }
 
+    public int GetItemCount(string itemName)
+    {
+        return items.ContainsKey(itemName) ? items[itemName] : 0;
+    }
+
+    public void ClearInventory()
+    {
+        items.Clear();
+        Debug.Log("Inventory cleared.");
+    }
+
     public void PrintInventory()
     {
-        foreach (var item in items)
+        foreach (var kvp in items)
         {
-            Debug.Log(item.Key + ": " + item.Value);
+            Debug.Log($"{kvp.Key}: {kvp.Value}");
         }
     }
+
+    // -----------------------------
+    // SOUL SHORTCUTS
+    // -----------------------------
+    private const string SoulKey = "Souls";
+
+    public void AddSoul(int amount) => AddItem(SoulKey, amount);
+    public bool SpendSoul(int amount) => RemoveItem(SoulKey, amount);
+    public bool HasSoul(int amount) => GetItemCount(SoulKey) >= amount;
+    public int GetSoulCount() => GetItemCount(SoulKey);
+
+    // -----------------------------
+    // HELLSTONE SHORTCUTS
+    // -----------------------------
+    private const string HellstoneKey = "Hellstone";
+
+    public void AddHellstone(int amount) => AddItem(HellstoneKey, amount);
+    public bool SpendHellstone(int amount) => RemoveItem(HellstoneKey, amount);
+    public bool HasHellstone(int amount) => GetItemCount(HellstoneKey) >= amount;
+    public int GetHellstoneCount() => GetItemCount(HellstoneKey);
+
+    // -----------------------------
+    // DIVINE DEW SHORTCUTS
+    // -----------------------------
+    private const string DivineDewKey = "DivineDew";
+
+    public void AddDivineDew(int amount) => AddItem(DivineDewKey, amount);
+    public bool SpendDivineDew(int amount) => RemoveItem(DivineDewKey, amount);
+    public bool HasDivineDew(int amount) => GetItemCount(DivineDewKey) >= amount;
+    public int GetDivineDewCount() => GetItemCount(DivineDewKey);
 }
