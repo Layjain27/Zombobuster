@@ -218,17 +218,23 @@ public class GroundedEnemy : MonoBehaviour, IDamageable
     {
         isDead = true;
 
-        // --- UPDATED: Disable NavMeshAgent instead of CharacterController ---
+        // Disable movement & health UI
         if (navMeshAgent != null) navMeshAgent.enabled = false;
-
         if (healthCanvas) healthCanvas.gameObject.SetActive(false);
 
+        // Drop souls using raycast
         if (soulsPrefab != null && Random.value <= soulsDropChance)
         {
-            Vector3 dropPosition = new Vector3(transform.position.x, 0, transform.position.z);
+            Vector3 dropPosition = transform.position + Vector3.up * 1f; // start slightly above enemy
+            if (Physics.Raycast(dropPosition, Vector3.down, out RaycastHit hit, 10f))
+            {
+                dropPosition = hit.point + Vector3.up * 0.2f; // adjust to ground level
+            }
+
             Instantiate(soulsPrefab, dropPosition, Quaternion.identity);
         }
 
+        // Pushback & spin animation
         Vector3 pushBackDir = (-transform.forward + Vector3.up).normalized;
         float timer = 1f;
         while (timer > 0)

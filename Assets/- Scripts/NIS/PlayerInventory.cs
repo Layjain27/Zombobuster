@@ -60,6 +60,18 @@ public class PlayerInventory : MonoBehaviour
     public bool HasSoul(int amount) => GetItemCount(SoulKey) >= amount;
     public int GetSoulCount() => GetItemCount(SoulKey);
 
+    // Property for direct access
+    public int souls
+    {
+        get => GetSoulCount();
+        set
+        {
+            int current = GetSoulCount();
+            if (value > current) AddSoul(value - current);
+            else if (value < current) SpendSoul(current - value);
+        }
+    }
+
     // -----------------------------
     // HELLSTONE SHORTCUTS
     // -----------------------------
@@ -70,6 +82,18 @@ public class PlayerInventory : MonoBehaviour
     public bool HasHellstone(int amount) => GetItemCount(HellstoneKey) >= amount;
     public int GetHellstoneCount() => GetItemCount(HellstoneKey);
 
+    // Property for direct access
+    public int hellstone
+    {
+        get => GetHellstoneCount();
+        set
+        {
+            int current = GetHellstoneCount();
+            if (value > current) AddHellstone(value - current);
+            else if (value < current) SpendHellstone(current - value);
+        }
+    }
+
     // -----------------------------
     // DIVINE DEW SHORTCUTS
     // -----------------------------
@@ -79,4 +103,16 @@ public class PlayerInventory : MonoBehaviour
     public bool SpendDivineDew(int amount) => RemoveItem(DivineDewKey, amount);
     public bool HasDivineDew(int amount) => GetItemCount(DivineDewKey) >= amount;
     public int GetDivineDewCount() => GetItemCount(DivineDewKey);
+
+    // Property for direct access
+    public int divineDew
+    {
+        get => GetDivineDewCount();
+        set
+        {
+            int current = GetDivineDewCount();
+            if (value > current) AddDivineDew(value - current);
+            else if (value < current) SpendDivineDew(current - value);
+        }
+    }
 }

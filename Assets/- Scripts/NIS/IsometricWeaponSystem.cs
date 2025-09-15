@@ -10,6 +10,7 @@ public class IsometricWeaponSystem : MonoBehaviour
     public LayerMask hitLayers;
     public AudioSource audioSource;
     public TextMeshProUGUI ammoUIText;
+    public PlayerInventory inventory; // For upgrades
 
     [Header("Weapon Models")]
     public GameObject meleeModel;
@@ -23,11 +24,21 @@ public class IsometricWeaponSystem : MonoBehaviour
     public Transform shotgunShootOrigin;
     public Transform rifleShootOrigin;
 
-    [Header("Weapon Stats")]
-    public WeaponStats meleeStats;
-    public WeaponStats pistolStats;
-    public WeaponStats shotgunStats;
-    public WeaponStats rifleStats;
+    [Header("Weapon Stats (SO)")]
+    public WeaponStatsSO meleeStats;
+    public WeaponStatsSO pistolStats;
+    public WeaponStatsSO shotgunStats;
+    public WeaponStatsSO rifleStats;
+
+    [Header("Upgrade Settings")]
+    public UpgradeTierSO[] upgradeTiers;
+    public int currentTier = 0;
+    private const int maxTier = 3;
+
+    [Header("Upgrade Costs")]
+    public int[] soulsCost = { 50, 100, 200 };
+    public int[] hellstoneCost = { 5, 10, 20 };
+    public int[] divineDewCost = { 0, 0, 1 };
 
     [Header("Audio")]
     public AudioClip weaponSwitchSound;
@@ -43,18 +54,17 @@ public class IsometricWeaponSystem : MonoBehaviour
     public float trailLifetime = 0.5f;
 
     private WeaponType currentWeaponType;
-    private WeaponStats activeWeapon;
+    private WeaponStatsSO activeWeapon;
     private Transform currentShootOrigin;
-
-    private int pistolAmmo;
-    private int shotgunAmmo;
-    private int rifleAmmo;
 
     private float nextFireTime;
     private bool isReloading = false;
     private PlayerControls inputActions;
     private bool isShooting = false;
     private GameObject currentWeaponModel;
+
+    [HideInInspector] public int currentAmmo;
+    [HideInInspector] public WeaponStatsSO ActiveWeapon => activeWeapon;
 
     private void Awake()
     {
@@ -68,6 +78,7 @@ public class IsometricWeaponSystem : MonoBehaviour
         inputActions.Player.Weapon2.performed += ctx => SwitchWeapon(WeaponType.Pistol);
         inputActions.Player.Weapon3.performed += ctx => SwitchWeapon(WeaponType.Shotgun);
         inputActions.Player.Weapon4.performed += ctx => SwitchWeapon(WeaponType.Rifle);
+        //inputActions.Player.UpgradeWeapon.performed += ctx => TryUpgradeWeapon();   
     }
 
     private void OnEnable() => inputActions.Enable();
@@ -75,10 +86,6 @@ public class IsometricWeaponSystem : MonoBehaviour
 
     private void Start()
     {
-        pistolAmmo = pistolStats.maxAmmo;
-        shotgunAmmo = shotgunStats.maxAmmo;
-        rifleAmmo = rifleStats.maxAmmo;
-
         SwitchWeapon(WeaponType.Pistol);
     }
 
@@ -100,8 +107,7 @@ public class IsometricWeaponSystem : MonoBehaviour
         Ray ray = mainCamera.ScreenPointToRay(Mouse.current.position.ReadValue());
         if (Physics.Raycast(ray, out RaycastHit hit, 100f, hitLayers))
         {
-            Vector3 targetPoint = hit.point;
-            Vector3 direction = (targetPoint - transform.position).normalized;
+            Vector3 direction = (hit.point - transform.position).normalized;
             direction.y = 0;
             transform.forward = direction;
         }
@@ -111,7 +117,7 @@ public class IsometricWeaponSystem : MonoBehaviour
     {
         nextFireTime = Time.time + (1f / activeWeapon.fireRate);
 
-        if (currentWeaponType != WeaponType.Melee && GetCurrentAmmo() <= 0)
+        if (currentWeaponType != WeaponType.Melee && currentAmmo <= 0)
         {
             Debug.Log("Out of ammo!");
             return;
@@ -130,16 +136,14 @@ public class IsometricWeaponSystem : MonoBehaviour
         PlaySound(activeWeapon.shootSound);
 
         if (currentWeaponType != WeaponType.Melee)
-            DecreaseAmmo();
+            currentAmmo--;
     }
 
     void MeleeAttack()
     {
         Collider[] hits = Physics.OverlapSphere(currentShootOrigin.position, activeWeapon.meleeRange, hitLayers);
         foreach (var hit in hits)
-        {
             HandleEnemyHit(hit, transform.position);
-        }
     }
 
     void RaycastShoot()
@@ -160,11 +164,7 @@ public class IsometricWeaponSystem : MonoBehaviour
     {
         for (int i = 0; i < activeWeapon.shotgunPellets; i++)
         {
-            Vector3 spread = transform.forward +
-                                 new Vector3(Random.Range(-activeWeapon.spread, activeWeapon.spread),
-                                             0,
-                                             Random.Range(-activeWeapon.spread, activeWeapon.spread));
-
+            Vector3 spread = transform.forward + new Vector3(Random.Range(-activeWeapon.spread, activeWeapon.spread), 0, Random.Range(-activeWeapon.spread, activeWeapon.spread));
             Ray ray = new Ray(currentShootOrigin.position, spread.normalized);
             if (Physics.SphereCast(ray, activeWeapon.sphereRadius, out RaycastHit hit, activeWeapon.range, hitLayers))
             {
@@ -178,37 +178,21 @@ public class IsometricWeaponSystem : MonoBehaviour
         }
     }
 
-    // --- THIS IS THE MODIFIED FUNCTION ---
     void HandleEnemyHit(Collider collider, Vector3 attackerPosition)
     {
-        // First, check if the thing we hit can even take damage.
         IDamageable damageableTarget = collider.GetComponentInParent<IDamageable>();
-        if (damageableTarget == null)
-        {
-            // It's just a wall or the floor, so do nothing.
-            return;
-        }
+        if (damageableTarget == null) return;
 
-        // --- THE FRIENDLY FIRE CHECK ---
-        // Now, check if this damageable object is a friendly player tower.
         TowerHealth friendlyTower = collider.GetComponentInParent<TowerHealth>();
         if (friendlyTower != null && friendlyTower.faction == Faction.Player)
-        {
-            // We hit a friendly tower! Do NOT deal damage.
-            Debug.Log("Hit a friendly player tower. No damage dealt.");
             return;
-        }
 
-        // --- If we passed the checks, it must be an enemy. Deal damage. ---
-        Debug.Log($"Dealing {activeWeapon.damage} damage to {collider.gameObject.name}.");
-        damageableTarget.TakeDamage(activeWeapon.damage);
+        damageableTarget.TakeDamage(activeWeapon.currentDamage);
     }
-
 
     IEnumerator Reload()
     {
-        if (isReloading || currentWeaponType == WeaponType.Melee) yield break;
-        if (GetCurrentAmmo() == GetMaxAmmo()) yield break;
+        if (isReloading || currentWeaponType == WeaponType.Melee || currentAmmo == activeWeapon.MaxAmmo) yield break;
 
         isReloading = true;
 
@@ -218,9 +202,9 @@ public class IsometricWeaponSystem : MonoBehaviour
             reloadSounds.Play();
         }
 
-        yield return new WaitForSeconds(activeWeapon.reloadTime);
+        yield return new WaitForSeconds(activeWeapon.currentReloadTime);
 
-        SetAmmo(GetMaxAmmo());
+        currentAmmo = activeWeapon.MaxAmmo;
         isReloading = false;
     }
 
@@ -270,6 +254,7 @@ public class IsometricWeaponSystem : MonoBehaviour
         };
 
         ActivateWeaponModel(newWeapon);
+        currentAmmo = activeWeapon.MaxAmmo; // Reset ammo on switch
     }
 
     void ActivateWeaponModel(WeaponType type)
@@ -291,46 +276,7 @@ public class IsometricWeaponSystem : MonoBehaviour
 
     void UpdateAmmoUI()
     {
-        if (currentWeaponType == WeaponType.Melee)
-            ammoUIText.text = "MELEE";
-        else
-            ammoUIText.text = $"{GetCurrentAmmo()} / {GetMaxAmmo()}";
-    }
-
-    int GetCurrentAmmo()
-    {
-        return currentWeaponType switch
-        {
-            WeaponType.Pistol => pistolAmmo,
-            WeaponType.Shotgun => shotgunAmmo,
-            WeaponType.Rifle => rifleAmmo,
-            _ => 0
-        };
-    }
-
-    int GetMaxAmmo()
-    {
-        return currentWeaponType switch
-        {
-            WeaponType.Pistol => pistolStats.maxAmmo,
-            WeaponType.Shotgun => shotgunStats.maxAmmo,
-            WeaponType.Rifle => rifleStats.maxAmmo,
-            _ => 0
-        };
-    }
-
-    void DecreaseAmmo()
-    {
-        if (currentWeaponType == WeaponType.Pistol) pistolAmmo--;
-        else if (currentWeaponType == WeaponType.Shotgun) shotgunAmmo--;
-        else if (currentWeaponType == WeaponType.Rifle) rifleAmmo--;
-    }
-
-    void SetAmmo(int amount)
-    {
-        if (currentWeaponType == WeaponType.Pistol) pistolAmmo = amount;
-        else if (currentWeaponType == WeaponType.Shotgun) shotgunAmmo = amount;
-        else if (currentWeaponType == WeaponType.Rifle) rifleAmmo = amount;
+        ammoUIText.text = currentWeaponType == WeaponType.Melee ? "MELEE" : $"{currentAmmo} / {activeWeapon.MaxAmmo}";
     }
 
     private void OnDrawGizmosSelected()
@@ -364,5 +310,59 @@ public class IsometricWeaponSystem : MonoBehaviour
         }
 
         Destroy(trail, trailLifetime);
+    }
+
+    // --- Weapon Upgrade System ---
+    void TryUpgradeWeapon()
+    {
+        if (currentTier >= maxTier)
+        {
+            Debug.Log("Already max weapon tier!");
+            return;
+        }
+
+        int nextTier = currentTier;
+
+        // Check resources
+        if (inventory.souls < soulsCost[nextTier] ||
+            inventory.hellstone < hellstoneCost[nextTier] ||
+            inventory.divineDew < divineDewCost[nextTier])
+        {
+            Debug.Log("Not enough resources to upgrade!");
+            return;
+        }
+
+        // Spend resources
+        inventory.souls -= soulsCost[nextTier];
+        inventory.hellstone -= hellstoneCost[nextTier];
+        inventory.divineDew -= divineDewCost[nextTier];
+
+        currentTier++;
+        ApplyUpgradeTier();
+
+        Debug.Log("Weapons upgraded to Tier " + currentTier);
+        currentAmmo = activeWeapon.MaxAmmo; // Update current ammo after upgrade
+    }
+
+    void ApplyUpgradeTier()
+    {
+        WeaponStatsSO[] allWeapons = { meleeStats, pistolStats, shotgunStats, rifleStats };
+
+        float damagePercent = 0;
+        float magPercent = 0;
+        float reloadPercent = 0;
+
+        for (int i = 0; i < currentTier; i++)
+        {
+            damagePercent += upgradeTiers[i].damagePercent;
+            magPercent += upgradeTiers[i].magPercent;
+            reloadPercent += upgradeTiers[i].reloadPercent;
+        }
+
+        foreach (var weapon in allWeapons)
+        {
+            weapon.ResetStats();
+            weapon.ApplyUpgrade(damagePercent, magPercent, reloadPercent);
+        }
     }
 }
