@@ -28,7 +28,7 @@ public class GroundedEnemy : MonoBehaviour, IDamageable
     public float allyDetectionRadius = 5f;
 
     [Header("Player Detection")]
-    public float playerDetectionRadius = 3f;
+    public float playerDetectionRadius = 5f; // Enemy will attack player if within this range
 
     [Header("Health Bar Settings")]
     public GameObject healthBarPrefab;
@@ -110,9 +110,10 @@ public class GroundedEnemy : MonoBehaviour, IDamageable
         if (attackTimer > 0) attackTimer -= Time.deltaTime;
     }
 
+    // --- Targeting Logic: Ally -> Tower -> Player (if in way) ---
     private Transform GetCurrentTarget()
     {
-        // 1. Check for closest ally first
+        // 1. Check closest ally first
         Collider[] allyColliders = Physics.OverlapSphere(transform.position, allyDetectionRadius, allyLayer);
         Transform closestAlly = null;
         float closestDistance = Mathf.Infinity;
@@ -125,16 +126,21 @@ public class GroundedEnemy : MonoBehaviour, IDamageable
                 closestAlly = col.transform;
             }
         }
-        if (closestAlly != null) return closestAlly;
 
-        // 2. Default to watchtower
-        if (watchtower != null) return watchtower;
+        // 2. Default target is watchtower if no ally
+        Transform mainTarget = (closestAlly != null) ? closestAlly : watchtower;
 
-        // 3. Player only if within “way” (detection radius)
-        if (player != null && Vector3.Distance(transform.position, player.position) <= playerDetectionRadius)
-            return player;
+        // 3. Player interception: attack player if within detection radius
+        if (player != null)
+        {
+            float playerDistance = Vector3.Distance(transform.position, player.position);
+            if (playerDistance <= playerDetectionRadius)
+            {
+                return player;
+            }
+        }
 
-        return null; // Nothing to attack
+        return mainTarget;
     }
 
     private void ChooseTargetAndAttack()

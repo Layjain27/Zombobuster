@@ -1,10 +1,10 @@
 using UnityEngine;
 
-[CreateAssetMenu(fileName = "UpgradeTier", menuName = "Weapons/Upgrade Tier")]
+[CreateAssetMenu(fileName = "UpgradeTier", menuName = "Weapons/UpgradeTier")]
 public class UpgradeTierSO : ScriptableObject
 {
-    [Header("Tier Values (in %)")]
-    public float damagePercent;   // e.g. +10
-    public float magPercent;      // e.g. +10
-    public float reloadPercent;   // e.g. -10
+    [Header("Upgrade Percentages")]
+    public float damagePercent = 10f;
+    public float magPercent = 10f;
+    public float reloadPercent = 10f;
 }
