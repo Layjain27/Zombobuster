@@ -38,12 +38,13 @@ public class PlayerNIS : MonoBehaviour
     {
         inputActions = new PlayerControls();
 
-        // Bind movement
         inputActions.Player.Move.performed += ctx => moveInput = ctx.ReadValue<Vector2>();
         inputActions.Player.Move.canceled += ctx => moveInput = Vector2.zero;
 
-        // Bind Jump
         inputActions.Player.Jump.performed += ctx => Jump();
+
+        // Bind F key to toggle ally follow/unfollow
+        inputActions.Player.Command.performed += ctx => CommandAllies();
     }
 
     private void Start()
@@ -55,7 +56,6 @@ public class PlayerNIS : MonoBehaviour
         if (gameOverCanvas)
             gameOverCanvas.SetActive(false);
     }
-
 
     private void OnEnable() => inputActions.Enable();
     private void OnDisable() => inputActions.Disable();
@@ -78,7 +78,6 @@ public class PlayerNIS : MonoBehaviour
         moveDirection = camForward * moveInput.y + camRight * moveInput.x;
         playerController.Move(moveDirection * moveSpeed * Time.deltaTime);
 
-        // Optional: Face movement direction
         if (moveDirection.sqrMagnitude > 0.01f)
         {
             Quaternion targetRotation = Quaternion.LookRotation(moveDirection);
@@ -100,9 +99,7 @@ public class PlayerNIS : MonoBehaviour
     private void Jump()
     {
         if (isGrounded)
-        {
             velocity.y = Mathf.Sqrt(jumpHeight * -2f * gravity);
-        }
     }
 
     public void TakeDamage(float damage)
@@ -124,5 +121,22 @@ public class PlayerNIS : MonoBehaviour
 
         if (gameOverCanvas)
             gameOverCanvas.SetActive(true);
+    }
+
+    // --- Ally Commander ---
+    private void CommandAllies()
+    {
+        GameObject[] allies = GameObject.FindGameObjectsWithTag("Ally");
+
+        foreach (GameObject allyObj in allies)
+        {
+            AllyController allyController = allyObj.GetComponent<AllyController>();
+            if (allyController != null)
+            {
+                allyController.ToggleFollowState();
+            }
+        }
+
+        Debug.Log("Toggled follow/unfollow for " + allies.Length + " allies.");
     }
 }
