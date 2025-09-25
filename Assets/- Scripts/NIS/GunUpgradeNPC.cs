@@ -3,11 +3,15 @@ using UnityEngine.InputSystem;
 
 public class GunUpgradeNPC : MonoBehaviour
 {
+    [Header("Detection Settings")]
+    public Transform playerTransform;
+    public float detectionRange = 5f; // Increased for easier testing
+
     [Header("UI Prompt")]
     public GameObject upgradePromptUI;
 
     [Header("Weapon System Reference")]
-    public IsometricWeaponSystem weaponSystem;
+    public IsometricWeaponSystem weaponSystem; // Reference to IsometricWeaponSystem
 
     [Header("Upgrade Costs")]
     public int[] soulsCost = { 50, 100, 200 };
@@ -15,64 +19,57 @@ public class GunUpgradeNPC : MonoBehaviour
     public int[] divineDewCost = { 0, 0, 1 };
 
     [Header("Upgrade Tiers")]
-    public UpgradeTierSO[] upgradeTiers;
+    public UpgradeTierSO[] upgradeTiers; // Assign 3 tiers in Inspector
     public int currentTier = 0;
-    private const int maxTier = 3;
 
-    [Header("Detection Settings")]
-    public float interactDistance = 4f;
-    public Camera playerCamera; // Assign your main camera here in Inspector
-
-    private bool canUpgrade = false;
+    private int maxTier => upgradeTiers.Length;
+    private bool playerInRange = false;
 
     private void Start()
     {
         if (upgradePromptUI != null)
             upgradePromptUI.SetActive(false);
 
-        if (playerCamera == null)
-            playerCamera = Camera.main;
+        // Instantiate weapon stats to avoid modifying original ScriptableObjects
+        weaponSystem.meleeStats = Instantiate(weaponSystem.meleeStats);
+        weaponSystem.pistolStats = Instantiate(weaponSystem.pistolStats);
+        weaponSystem.shotgunStats = Instantiate(weaponSystem.shotgunStats);
+        weaponSystem.rifleStats = Instantiate(weaponSystem.rifleStats);
     }
 
     private void Update()
     {
-        DetectNPCWithRaycast();
-        HandleInteraction();
-    }
+        if (playerTransform == null || weaponSystem == null) return;
 
-    private void DetectNPCWithRaycast()
-    {
-        Ray ray = new Ray(playerCamera.transform.position, playerCamera.transform.forward);
-        RaycastHit hit;
+        float distance = Vector3.Distance(transform.position, playerTransform.position);
 
-        if (Physics.Raycast(ray, out hit, interactDistance))
+        if (distance <= detectionRange)
         {
-            if (hit.collider != null && hit.collider.gameObject == gameObject)
+            if (!playerInRange)
             {
-                if (!canUpgrade)
-                {
-                    canUpgrade = true;
-                    upgradePromptUI?.SetActive(true);
-                }
-                return;
+                playerInRange = true;
+                ShowUpgradePrompt(true);
+            }
+
+            if (Keyboard.current != null && Keyboard.current.eKey.wasPressedThisFrame)
+            {
+                TryUpgradeWeapon();
             }
         }
-
-        // If not hitting NPC
-        if (canUpgrade)
+        else
         {
-            canUpgrade = false;
-            upgradePromptUI?.SetActive(false);
+            if (playerInRange)
+            {
+                playerInRange = false;
+                ShowUpgradePrompt(false);
+            }
         }
     }
 
-    private void HandleInteraction()
+    private void ShowUpgradePrompt(bool show)
     {
-        if (canUpgrade && Keyboard.current != null && Keyboard.current.eKey.wasPressedThisFrame)
-        {
-            Debug.Log("E pressed - trying to upgrade...");
-            TryUpgradeWeapon();
-        }
+        if (upgradePromptUI != null)
+            upgradePromptUI.SetActive(show);
     }
 
     private void TryUpgradeWeapon()
@@ -85,6 +82,10 @@ public class GunUpgradeNPC : MonoBehaviour
 
         int nextTier = currentTier;
 
+        // Debug current resources
+        Debug.Log($"Attempting upgrade to Tier {nextTier + 1}. Inventory: Souls {weaponSystem.inventory.souls}, Hellstone {weaponSystem.inventory.hellstone}, DivineDew {weaponSystem.inventory.divineDew}");
+
+        // Check if player has enough resources
         if (weaponSystem.inventory.souls < soulsCost[nextTier] ||
             weaponSystem.inventory.hellstone < hellstoneCost[nextTier] ||
             weaponSystem.inventory.divineDew < divineDewCost[nextTier])
@@ -93,7 +94,7 @@ public class GunUpgradeNPC : MonoBehaviour
             return;
         }
 
-        // Spend resources
+        // Deduct resources
         weaponSystem.inventory.souls -= soulsCost[nextTier];
         weaponSystem.inventory.hellstone -= hellstoneCost[nextTier];
         weaponSystem.inventory.divineDew -= divineDewCost[nextTier];
@@ -101,36 +102,40 @@ public class GunUpgradeNPC : MonoBehaviour
         currentTier++;
         ApplyUpgradeTier();
 
+        // Reset current ammo for the active weapon
         weaponSystem.currentAmmo = weaponSystem.ActiveWeapon.MaxAmmo;
 
-        Debug.Log("Weapon upgraded to Tier " + currentTier);
+        Debug.Log($"Weapon upgraded to Tier {currentTier}");
     }
 
     private void ApplyUpgradeTier()
     {
-        WeaponStatsSO[] allWeapons =
-        {
-            weaponSystem.meleeStats,
-            weaponSystem.pistolStats,
-            weaponSystem.shotgunStats,
-            weaponSystem.rifleStats
-        };
+        WeaponStatsSO[] allWeapons = { weaponSystem.meleeStats, weaponSystem.pistolStats, weaponSystem.shotgunStats, weaponSystem.rifleStats };
 
-        float damagePercent = 0;
-        float magPercent = 0;
-        float reloadPercent = 0;
+        float totalDamagePercent = 0;
+        float totalMagPercent = 0;
+        float totalReloadPercent = 0;
 
         for (int i = 0; i < currentTier; i++)
         {
-            damagePercent += upgradeTiers[i].damagePercent;
-            magPercent += upgradeTiers[i].magPercent;
-            reloadPercent += upgradeTiers[i].reloadPercent;
+            totalDamagePercent += upgradeTiers[i].damagePercent;
+            totalMagPercent += upgradeTiers[i].magPercent;
+            totalReloadPercent += upgradeTiers[i].reloadPercent;
         }
 
         foreach (var weapon in allWeapons)
         {
             weapon.ResetStats();
-            weapon.ApplyUpgrade(damagePercent, magPercent, reloadPercent);
+            weapon.ApplyUpgrade(totalDamagePercent, totalMagPercent, totalReloadPercent);
         }
+
+        Debug.Log($"Applied upgrades: Damage {totalDamagePercent}%, Mag {totalMagPercent}%, Reload {totalReloadPercent}%");
+    }
+
+    private void OnDrawGizmosSelected()
+    {
+        // Visualize detection range
+        Gizmos.color = Color.green;
+        Gizmos.DrawWireSphere(transform.position, detectionRange);
     }
 }
