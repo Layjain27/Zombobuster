@@ -1,7 +1,8 @@
+﻿using System.Collections;
+using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.AI; // --- NEW: Required for NavMeshAgent ---
 using UnityEngine.UI;
-using System.Collections;
 
 // Ensure the GameObject has these components
 [RequireComponent(typeof(NavMeshAgent))]
@@ -12,13 +13,13 @@ public class GroundedEnemy : MonoBehaviour, IDamageable
     [Header("Identity")]
     public Faction faction;
 
-    // --- REMOVED: Old Movement Settings ---
-    // public float speed = 3f;
-    // public float gravity = -9.81f;
-    // public float groundCheckDistance = 1.1f;
-    // public LayerMask groundLayer;
+    // --- REMOVED: Old Movement Settings ---
+    // public float speed = 3f;
+    // public float gravity = -9.81f;
+    // public float groundCheckDistance = 1.1f;
+    // public LayerMask groundLayer;
 
-    [Header("Attack Settings")]
+    [Header("Attack Settings")]
     public float attackRange = 1.5f;
     public float attackDamage = 10f;
     public float attackCooldown = 2f;
@@ -54,21 +55,21 @@ public class GroundedEnemy : MonoBehaviour, IDamageable
     [SerializeField] private float soulsDropChance = 1f;
 
     private Transform player;
-    // --- REPLACED: CharacterController with NavMeshAgent ---
-    private NavMeshAgent navMeshAgent;
+    // --- REPLACED: CharacterController with NavMeshAgent ---
+    private NavMeshAgent navMeshAgent;
     private CapsuleCollider capsuleCollider;
     private bool isDead = false;
     private bool aggroedByPlayer = false;
-    // --- REMOVED: verticalVelocity ---
+    // --- REMOVED: verticalVelocity ---
 
-    public event System.Action OnDeath;
+    public event System.Action OnDeath;
 
     private void Start()
     {
         faction = Faction.Enemy;
 
-        // --- NEW: Add a check to ensure the watchtower is assigned ---
-        if (watchtower == null)
+        // --- NEW: Add a check to ensure the watchtower is assigned ---
+        if (watchtower == null)
         {
             Debug.LogWarning("Watchtower transform is not assigned on " + gameObject.name + ". The enemy may not move without a default target.", this);
         }
@@ -77,16 +78,16 @@ public class GroundedEnemy : MonoBehaviour, IDamageable
         if (playerObj != null) player = playerObj.transform;
         else Debug.LogError("Player with tag 'Player' not found!");
 
-        // --- NEW: Get NavMeshAgent and Collider components ---
-        navMeshAgent = GetComponent<NavMeshAgent>();
+        // --- NEW: Get NavMeshAgent and Collider components ---
+        navMeshAgent = GetComponent<NavMeshAgent>();
         capsuleCollider = GetComponent<CapsuleCollider>();
 
-        // --- NEW: Sync agent height with collider height to prevent sinking ---
-        navMeshAgent.height = capsuleCollider.height;
+        // --- NEW: Sync agent height with collider height to prevent sinking ---
+        navMeshAgent.height = capsuleCollider.height;
 
-        // --- NEW: Configure NavMeshAgent based on attack range ---
-        // The agent will stop just before it reaches the attack range.
-        navMeshAgent.stoppingDistance = attackRange * 0.9f;
+        // --- NEW: Configure NavMeshAgent based on attack range ---
+        // The agent will stop just before it reaches the attack range.
+        navMeshAgent.stoppingDistance = attackRange * 0.9f;
 
         currentHealth = maxHealth;
 
@@ -105,14 +106,14 @@ public class GroundedEnemy : MonoBehaviour, IDamageable
     {
         if (isDead) return;
 
-        // --- REFACTORED: Simplified logic for post-attack pause ---
-        if (postAttackTimer > 0)
+        // --- REFACTORED: Simplified logic for post-attack pause ---
+        if (postAttackTimer > 0)
         {
             postAttackTimer -= Time.deltaTime;
             navMeshAgent.isStopped = true; // Force the agent to stop during the pause.
 
-            // Face the current target during the post-attack pause
-            Transform currentTarget = GetCurrentTarget();
+            // Face the current target during the post-attack pause
+            Transform currentTarget = GetCurrentTarget();
             if (currentTarget != null)
             {
                 Vector3 lookDir = currentTarget.position - transform.position;
@@ -124,7 +125,7 @@ public class GroundedEnemy : MonoBehaviour, IDamageable
                 }
             }
             return; // Exit Update early during the pause
-        }
+        }
 
         ChooseTargetAndAttack();
         UpdateHealthBarPosition();
@@ -133,37 +134,37 @@ public class GroundedEnemy : MonoBehaviour, IDamageable
         if (attackTimer > 0) attackTimer -= Time.deltaTime;
     }
 
-    // --- NEW: Extracted target selection into its own method for clarity ---
-    private Transform GetCurrentTarget()
+    // --- NEW: Extracted target selection into its own method for clarity ---
+    private Transform GetCurrentTarget()
     {
-        // Prioritize the player if they are in range or have aggroed the enemy
-        if (player != null && (Vector3.Distance(transform.position, player.position) <= detectionRange || aggroedByPlayer))
+        // Prioritize the player if they are in range or have aggroed the enemy
+        if (player != null && (Vector3.Distance(transform.position, player.position) <= detectionRange || aggroedByPlayer))
         {
             return player;
         }
-        // Otherwise, return the default watchtower target
-        return watchtower;
+        // Otherwise, return the default watchtower target
+        return watchtower;
     }
 
     private void ChooseTargetAndAttack()
     {
         Transform currentTarget = GetCurrentTarget();
 
-        // If there's no target at all, do nothing.
-        if (currentTarget == null)
+        // If there's no target at all, do nothing.
+        if (currentTarget == null)
         {
             navMeshAgent.isStopped = true; // Stop the agent if it has no target
-            return;
+            return;
         }
 
-        // --- REFACTORED: Logic for movement and attacking is now clearer ---
-        navMeshAgent.SetDestination(currentTarget.position);
+        // --- REFACTORED: Logic for movement and attacking is now clearer ---
+        navMeshAgent.SetDestination(currentTarget.position);
         float distance = Vector3.Distance(transform.position, currentTarget.position);
 
         if (distance <= navMeshAgent.stoppingDistance)
         {
-            // In attack range
-            navMeshAgent.isStopped = true;
+            // In attack range
+            navMeshAgent.isStopped = true;
             if (attackTimer <= 0f)
             {
                 IDamageable targetHealth = currentTarget.GetComponent<IDamageable>();
@@ -177,15 +178,15 @@ public class GroundedEnemy : MonoBehaviour, IDamageable
         }
         else
         {
-            // Out of attack range, so move
-            navMeshAgent.isStopped = false;
+            // Out of attack range, so move
+            navMeshAgent.isStopped = false;
         }
     }
 
-    // --- REMOVED: MoveTowards(), ApplyGravity(), and IsGrounded() methods ---
-    // The NavMeshAgent now handles all of this logic.
+    // --- REMOVED: MoveTowards(), ApplyGravity(), and IsGrounded() methods ---
+    // The NavMeshAgent now handles all of this logic.
 
-    public void TakeDamage(float damage)
+    public void TakeDamage(float damage)
     {
         if (isDead) return;
         currentHealth -= damage;
@@ -218,8 +219,8 @@ public class GroundedEnemy : MonoBehaviour, IDamageable
     {
         isDead = true;
 
-        // --- UPDATED: Disable NavMeshAgent instead of CharacterController ---
-        if (navMeshAgent != null) navMeshAgent.enabled = false;
+        // --- UPDATED: Disable NavMeshAgent instead of CharacterController ---
+        if (navMeshAgent != null) navMeshAgent.enabled = false;
 
         if (healthCanvas) healthCanvas.gameObject.SetActive(false);
 
@@ -247,8 +248,8 @@ public class GroundedEnemy : MonoBehaviour, IDamageable
     {
         if (healthCanvas && Camera.main != null)
         {
-            // --- UPDATED: Use CapsuleCollider for height calculation ---
-            float enemyHeight = capsuleCollider.height;
+            // --- UPDATED: Use CapsuleCollider for height calculation ---
+            float enemyHeight = capsuleCollider.height;
             healthCanvas.transform.position = transform.position + Vector3.up * (enemyHeight + 0.1f);
 
             Vector3 cameraForward = Camera.main.transform.forward;
@@ -280,5 +281,4 @@ public class GroundedEnemy : MonoBehaviour, IDamageable
         Gizmos.color = Color.cyan;
         Gizmos.DrawWireSphere(transform.position, spacingRadius);
     }
-}
-
+} // Filename: AllyController.cs
