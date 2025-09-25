@@ -118,7 +118,7 @@ public class PlayerNIS : MonoBehaviour
     }
 
     private void Die()
-    {
+    {   
         IsDead = true;
         Time.timeScale = 0f;
 

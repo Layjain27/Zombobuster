@@ -1,17 +1,13 @@
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.InputSystem;
 
 public class GunUpgradeNPC : MonoBehaviour
 {
-    [Header("Detection Settings")]
-    public Transform playerTransform;
-    public float detectionRange = 3f;
-
     [Header("UI Prompt")]
     public GameObject upgradePromptUI;
 
     [Header("Weapon System Reference")]
-    public IsometricWeaponSystem weaponSystem; // Reference to IsometricWeaponSystem
+    public IsometricWeaponSystem weaponSystem;
 
     [Header("Upgrade Costs")]
     public int[] soulsCost = { 50, 100, 200 };
@@ -19,53 +15,64 @@ public class GunUpgradeNPC : MonoBehaviour
     public int[] divineDewCost = { 0, 0, 1 };
 
     [Header("Upgrade Tiers")]
-    public UpgradeTierSO[] upgradeTiers; // Assign 3 tiers in Inspector
+    public UpgradeTierSO[] upgradeTiers;
     public int currentTier = 0;
     private const int maxTier = 3;
 
-    private bool playerInRange = false;
+    [Header("Detection Settings")]
+    public float interactDistance = 4f;
+    public Camera playerCamera; // Assign your main camera here in Inspector
+
+    private bool canUpgrade = false;
 
     private void Start()
     {
         if (upgradePromptUI != null)
             upgradePromptUI.SetActive(false);
+
+        if (playerCamera == null)
+            playerCamera = Camera.main;
     }
 
     private void Update()
     {
-        if (playerTransform == null || weaponSystem == null) return;
+        DetectNPCWithRaycast();
+        HandleInteraction();
+    }
 
-        float distance = Vector3.Distance(transform.position, playerTransform.position);
+    private void DetectNPCWithRaycast()
+    {
+        Ray ray = new Ray(playerCamera.transform.position, playerCamera.transform.forward);
+        RaycastHit hit;
 
-        // Check if player is within range
-        if (distance <= detectionRange)
+        if (Physics.Raycast(ray, out hit, interactDistance))
         {
-            if (!playerInRange)
+            if (hit.collider != null && hit.collider.gameObject == gameObject)
             {
-                playerInRange = true;
-                ShowUpgradePrompt(true);
-            }
-
-            // Press E to upgrade
-            if (Keyboard.current != null && Keyboard.current.eKey.wasPressedThisFrame)
-            {
-                TryUpgradeWeapon();
+                if (!canUpgrade)
+                {
+                    canUpgrade = true;
+                    upgradePromptUI?.SetActive(true);
+                }
+                return;
             }
         }
-        else
+
+        // If not hitting NPC
+        if (canUpgrade)
         {
-            if (playerInRange)
-            {
-                playerInRange = false;
-                ShowUpgradePrompt(false);
-            }
+            canUpgrade = false;
+            upgradePromptUI?.SetActive(false);
         }
     }
 
-    private void ShowUpgradePrompt(bool show)
+    private void HandleInteraction()
     {
-        if (upgradePromptUI != null)
-            upgradePromptUI.SetActive(show);
+        if (canUpgrade && Keyboard.current != null && Keyboard.current.eKey.wasPressedThisFrame)
+        {
+            Debug.Log("E pressed - trying to upgrade...");
+            TryUpgradeWeapon();
+        }
     }
 
     private void TryUpgradeWeapon()
@@ -78,7 +85,6 @@ public class GunUpgradeNPC : MonoBehaviour
 
         int nextTier = currentTier;
 
-        // Check resources in player's inventory
         if (weaponSystem.inventory.souls < soulsCost[nextTier] ||
             weaponSystem.inventory.hellstone < hellstoneCost[nextTier] ||
             weaponSystem.inventory.divineDew < divineDewCost[nextTier])
@@ -95,15 +101,20 @@ public class GunUpgradeNPC : MonoBehaviour
         currentTier++;
         ApplyUpgradeTier();
 
-        // Update current ammo for the active weapon
         weaponSystem.currentAmmo = weaponSystem.ActiveWeapon.MaxAmmo;
 
-        Debug.Log("Weapons upgraded to Tier " + currentTier);
+        Debug.Log("Weapon upgraded to Tier " + currentTier);
     }
 
     private void ApplyUpgradeTier()
     {
-        WeaponStatsSO[] allWeapons = { weaponSystem.meleeStats, weaponSystem.pistolStats, weaponSystem.shotgunStats, weaponSystem.rifleStats };
+        WeaponStatsSO[] allWeapons =
+        {
+            weaponSystem.meleeStats,
+            weaponSystem.pistolStats,
+            weaponSystem.shotgunStats,
+            weaponSystem.rifleStats
+        };
 
         float damagePercent = 0;
         float magPercent = 0;

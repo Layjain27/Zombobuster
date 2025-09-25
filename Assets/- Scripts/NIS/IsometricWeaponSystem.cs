@@ -365,4 +365,5 @@ public class IsometricWeaponSystem : MonoBehaviour
             weapon.ApplyUpgrade(damagePercent, magPercent, reloadPercent);
         }
     }
+
 }
